@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "string": "cpp",
+        "cstdint": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "array": "cpp",
+        "*.ipp": "cpp",
+        "iostream": "cpp",
+        "iosfwd": "cpp",
+        "stdexcept": "cpp",
+        "system_error": "cpp",
+        "chrono": "cpp",
+        "filesystem": "cpp",
+        "iomanip": "cpp",
+        "fstream": "cpp",
+        "regex": "cpp",
+        "new": "cpp",
+        "*.tcc": "cpp"
+    },
+    "cmake.configureOnOpen": true
+}

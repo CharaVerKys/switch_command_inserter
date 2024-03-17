@@ -1,0 +1,5 @@
+build/
+libs/asio-1.28.0
+libs/rapidjson
+libs/libssh2
+libs/SQliteCpp
