@@ -48,8 +48,6 @@ void SNcheck_port_async(HOST &host, asio::io_context &io_context, HOST::PORT &po
 
 //мусорная функция, не используется
 bool is_port_open(const uint32_t ip_address, int port);
-// я не справился с установкой icmp соединения, хотя контекст захватывается для каждой отдельной, ресив закрывается мультипликативно
-void SNping_host(HOST &host, asio::io_context &io_context,std::vector<HOST> &validHosts);
 
 
 // parseIpMaskToIpPool.cpp

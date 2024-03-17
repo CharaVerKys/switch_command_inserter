@@ -17,108 +17,7 @@ bool is_port_open(const uint32_t ip_address, int port)
     }
 }
 
-// часть icmp
-void calculate_checksumICMP(std::vector<unsigned char> &data)
-{
-    std::size_t length = data.size();
-    uint32_t sum = 0;
 
-    for (std::size_t i = 0; i < length; i += 2)
-    {
-        uint16_t word = (data[i] << 8) + data[i + 1];
-        sum += static_cast<uint32_t>(word);
-    }
-
-    sum = (sum >> 16) + (sum & 0xFFFF);
-    sum += (sum >> 16);
-
-    uint16_t checksum = static_cast<uint16_t>(~sum);
-    data[2] = static_cast<unsigned char>(checksum >> 8);
-    data[3] = static_cast<unsigned char>(checksum & 0xFF);
-}
-
-// я не справился с установкой icmp соединения, хотя контекст захватывается для каждой отдельной, ресив закрывается мультипликативно
-void SNping_host(HOST &host, asio::io_context &io_context, std::vector<HOST> &validHosts)
-{
-    auto socket = std::make_shared<asio::ip::icmp::socket>(io_context);
-    asio::ip::icmp::endpoint endpoint(asio::ip::address_v4(host.address), 0);
-
-    std::vector<unsigned char> request(64, 0);
-    request[0] = 8;                                        // ICMP echo request
-    request[1] = 0;                                        // Code
-    request[4] = static_cast<uint8_t>(host.address);       // Identifier
-    request[5] = static_cast<uint8_t>(8 >> host.address);  // Identifier
-    request[6] = static_cast<uint8_t>(16 >> host.address); // Sequence number
-    request[7] = static_cast<uint8_t>(24 >> host.address); // Sequence number
-    for (std::size_t i = 8; i < request.size(); ++i)
-        request[i] = static_cast<unsigned char>(i);
-
-    calculate_checksumICMP(request);
-    try
-    {
-        socket->open(asio::ip::icmp::v4());
-        socket->async_send_to(asio::buffer(request), endpoint,
-                              [&validHosts, &host, socket, &io_context](const asio::error_code &error, std::size_t)
-                              {
-                                  if (!error)
-                                  {
-
-                                      auto timer = std::make_shared<asio::steady_timer>(io_context, std::chrono::seconds(5));
-                                      timer->async_wait([socket, &host](const asio::error_code &timer_error)
-                                                        {
-                                      if (!timer_error)
-                                      {
-                                          socket->close();
-                                           std::cout << "not reseaved: " << asio::ip::address_v4(host.address)  << std::endl;
-                                      } });
-
-                                      auto reply_buffer = std::make_shared<std::array<unsigned char, 128>>();
-                                      auto reply_endpoint = std::make_shared<asio::ip::icmp::endpoint>();
-
-                                      socket->async_receive_from(asio::buffer(*reply_buffer), *reply_endpoint,
-
-                                                                 [socket, timer, reply_buffer, reply_endpoint, &validHosts, &host](const asio::error_code &receive_error, std::size_t length)
-
-                                                                 {
-                                                                     ;
-                                                                     timer->cancel();
-
-                                                                     if (!receive_error)
-                                                                     {
-                                                                         if (reply_buffer->at(20) == 0)
-                                                                         {
-                                                                             std::cout << reply_endpoint->address().to_string() << std::endl;
-                                                                             if (reply_endpoint->address() == asio::ip::address_v4(host.address))
-                                                                             {
-                                                                                 validHosts.emplace_back(host);
-                                                                             }
-                                                                             else
-                                                                             {
-                                                                                 wlog->writeLog("Error: Ответ на ICMP пришёл с другого адреса: " + reply_endpoint->address().to_string() + " ожидалось:" + asio::ip::address_v4(host.address).to_string());
-                                                                             }
-                                                                         }
-                                                                         else
-                                                                         {
-                                                                             wlog->writeLog("Error: Ответ на ICMP не reply. Ответ: " + std::to_string(reply_buffer->at(20)));
-                                                                         }
-                                                                     }
-                                                                     else
-                                                                     {
-                                                                         plog->writeLog("не смог принять ICMP ответ на хост " + asio::ip::address_v4(host.address).to_string());
-                                                                     }
-                                                                 });
-                                  }
-                                  else
-                                  {
-                                      throw std::runtime_error("не смог отправить ICMP запрос");
-                                  }
-                              });
-    }
-    catch (std::exception &e)
-    {
-        plog->writeLog("Ошибка при подключении по ICMP: " + std::string(e.what()));
-    }
-}
 
 std::vector<HOST> SNinitHostsVector(SNparsedNetworkHost &IpPool)
 {
@@ -174,16 +73,36 @@ std::vector<HOST> SNinitHostsVector(SNparsedNetworkHost &IpPool)
 }
 
 void SNcheck_port_async(HOST &host, asio::io_context &io_context, HOST::PORT &port, std::vector<HOST> &validHosts)
-
 {
     auto socket = std::make_shared<asio::ip::tcp::socket>(io_context);
     asio::ip::tcp::endpoint endpoint(asio::ip::address_v4(host.address), port.number);
+
+auto timer = std::make_shared<asio::steady_timer>(io_context);
+    timer->expires_after(std::chrono::seconds(21)); 
+    // выполнение таймера
+    timer->async_wait([socket,timer](const asio::error_code &er) {
+        if (!er) {
+            // если таймер сработал, дроп подключения
+            if (socket->is_open()) {
+                socket->close();
+            }
+        }else{
+            if (er != asio::error::operation_aborted) {
+            plog->writeLog("ошибка таймера для функции одного вектора: "+er.message());
+        }}
+    });
+
+
+
+
     try
     {
-        socket->async_connect(endpoint, [&host, &port, socket, &validHosts](const asio::error_code &error)
+        socket->async_connect(endpoint, [&host, &port, socket, &validHosts, timer](const asio::error_code &error)
                               {
+
                             
         if (!error) {
+                                                             timer->cancel();
             port.establish=true;
             validHosts.emplace_back(host);
         } });
@@ -199,14 +118,30 @@ void SNcheck_port_async(HOST &host, asio::io_context &io_context, HOST::PORT &po
 {
 
     auto socket = std::make_shared<asio::ip::tcp::socket>(io_context);
-
     asio::ip::tcp::endpoint endpoint(asio::ip::address_v4(host.address), port.number);
+
+
+auto timer = std::make_shared<asio::steady_timer>(io_context);
+    timer->expires_after(std::chrono::seconds(21)); 
+    // выполнение таймера
+    timer->async_wait([socket,timer](const asio::error_code &er) {
+        if (!er) {
+            // если таймер сработал, дроп подключения
+            if (socket->is_open()) {
+                socket->close();
+            }
+        }else{if (er != asio::error::operation_aborted) {
+            plog->writeLog("ошибка таймера для функции двух векторов: "+er.message());
+        }}
+    });
+
+
     try
     {
-        socket->async_connect(endpoint, [&host, &port, socket, &validHosts, &refusedHosts](const asio::error_code &error)
+        socket->async_connect(endpoint, [&host, &port, socket, &validHosts, &refusedHosts, timer](const asio::error_code &error)
                               {
-                            
         if (!error) {
+                             timer->cancel();
             port.establish=true;
             validHosts.emplace_back(host);
         } else {
@@ -259,7 +194,7 @@ ActiveHOSTS ScanNetwork(std::vector<HOST> &hosts)
     }
     std::cout << activeHosts.ssh.size() << " хостов с открытым SSH(22)" << std::endl;
     std::cout << activeHosts.onlyTelnet.size() << " хостов где открыт только telnet(23) " << std::endl;
-    std::cout << "Подробнее смотреть в logs/working.log" << std::endl;
+    std::cout << "Подробнее смотреть в logs/log#/working.log" << std::endl;
     std::cout << "Telnet рекомендуется обработать вручную, текущая версия не обрабатывает telnet. Иначе производится неполное изменение настроек сети" << std::endl;
     plog->writeLog("Записан лог найденных хостов");
     return std::move(activeHosts);
