@@ -18,7 +18,14 @@ int main(const int argc, char const *argv[])
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
     // тут что-то было, пока я не вынес в отдельные функции (например rootScan)
 asio::io_context io;
-        auto session = std::make_shared<SSHSession>(io,"192.168.1.145","chara","chara","");
+
+std::string str1;
+std::string str2;
+std::string str3;
+std::cin >> str1;
+std::cin >> str2;
+std::cin >> str3;
+        auto session = std::make_shared<SSHSession>(io,str1,str2,str3,"");
 
 
     SWITCH(argv[1]) // в этом свиче нельзя создавать объекты, только операции с ними
