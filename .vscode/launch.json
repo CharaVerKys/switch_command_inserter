@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["commit"], // Ваши параметры запуска
+            "args": ["identify"], // Ваши параметры запуска
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
