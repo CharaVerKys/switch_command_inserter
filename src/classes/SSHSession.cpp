@@ -6,7 +6,7 @@ SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COM
     this->_iteration = 0;
     _IPstring = asio::ip::address_v4(_host.address).to_string();
     wlog->writeLog("Инициализирован коммит для " + _IPstring);
-    _timer.expires_after(std::chrono::seconds(5));
+    _timer.expires_after(std::chrono::minutes(15));
 }
 
 void SSHSession::connect()
