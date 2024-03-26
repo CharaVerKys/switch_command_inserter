@@ -20,6 +20,8 @@ void emptyOut(const std::string& TableName);
 bool isTableExist(const std::string& TableName);
 
 
+void write_one_hostCommit(const std::string& TableName, HOST& host);
+std::vector<HOST> read_from_databaseCommit(const std::string& TableName);
 
 };
 

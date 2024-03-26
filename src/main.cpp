@@ -17,16 +17,12 @@ int main(const int argc, char const *argv[])
     // для уникальности сделал чтото типо особого имени
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
     // тут что-то было, пока я не вынес в отдельные функции (например rootScan)
-asio::io_context io;
-
+HOST host;
+std::vector<HOST> oneHost;
+std::string str0;
 std::string str1;
 std::string str2;
 std::string str3;
-std::cin >> str1;
-std::cin >> str2;
-std::cin >> str3;
-        auto session = std::make_shared<SSHSession>(io,str1,str2,str3,"");
-
 
     SWITCH(argv[1]) // в этом свиче нельзя создавать объекты, только операции с ними
     {
@@ -35,38 +31,34 @@ std::cin >> str3;
                        rootScan(argc, argv); // сюда не забыть добавить 2 поинта на функции к identify
 
         break; // конец scan
-               //
-               //
-               //
-               //
-               //
 
         CASE("identify") : //
 
-        session->connect();
-        io.run();
 
-
-
-
+std::cin >> str0;
+std::cin >> str1;
+std::cin >> str2;
+std::cin >> str3;
+host.address = ipToBin(str0);
+host.login.name="str1";
+host.login.password = "str2";
+host.model="str3";
+oneHost.push_back(host);
+sqlite->write_to_database(TableNameForSSH,oneHost);
 
 
                            break; // конец identify
-                                  //
-                                  //
-                                  //
-                                  //
-                                  //
 
         CASE("commit") : //
-
-                         break; // конец commit
-                                //
-                                //
-                                //
-                                //
-                                //
-
+                         rootCommit(argc, argv);
+        break;            // конец commit
+                          //
+                          //
+                          //
+                          //
+                          //
+                          //
+                          //
         CASE("showssh") : // если нет существительного выдать exit 1 и сообщение
                           if (argc < 3)
         {

@@ -84,18 +84,18 @@ void dbLite::emptyOut(const std::string &TableName)
 
     try
     {
-        // Проверяем существует ли таблица
-        SQLite::Statement query(*db, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='" + TableName + "';");
-        query.executeStep();
-        bool tableExists = static_cast<bool>(query.getColumn(0).getInt());
+        // // Проверяем существует ли таблица
+        // SQLite::Statement query(*db, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='" + TableName + "';");
+        // query.executeStep();
+        // bool tableExists = static_cast<bool>(query.getColumn(0).getInt());
 
-        // Если таблица существует, очищаем ее
+        // // Если таблица существует, очищаем ее
 
-        if (tableExists)
-        {
+        // if (tableExists)
+        // {
             db->exec("DELETE FROM " + TableName + ";");
             plog->writeLog("Таблица " + TableName + " успешно очищена.");
-        }
+        // }
         // Кста пример когда гпт капец касячит, я ему описал что нужно чтобы он мне сгенерил запрос правильно,
         // но он зараза мне левый функционал предлагает, я с 4 раза только добился такого результата, фактически когда уже сам код написал
     }
@@ -122,5 +122,82 @@ bool dbLite::isTableExist(const std::string &TableName)
         throw std::runtime_error("Ошибка при попытки узнать, существует ли таблица  " + TableName + " в базе данных: " + std::string(e.what()));
     }
 }
+
+
+void dbLite::write_one_hostCommit(const std::string &TableName, HOST& host){
+  try
+    {
+        db->exec("CREATE TABLE IF NOT EXISTS " + TableName + " (address INTEGER, name TEXT, log TEXT, model TEXT);");
+       // Подготавливаем запрос INSERT
+            SQLite::Statement query(*db, "INSERT INTO " + TableName + " (address, name, log, model) VALUES (?, ?, ?, ?);");
+
+            // Привязываем значения к параметрам запроса
+            query.bind(1, static_cast<int64_t>(host.address));
+            query.bind(2, host.login.name);
+            query.bind(3, host.log);
+            query.bind(4, host.model);
+
+            // Выполняем запрос
+            query.exec();
+        
+        wlog->writeLog("Данные хоста " + asio::ip::address_v4(host.address).to_string() + " успешно записаны в базу данных, таблица: " + TableName);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Ошибка при записи в базу данных: " << e.what() << " на хост "<< asio::ip::address_v4(host.address).to_string()<< std::endl;
+        plog->writeLog("Ошибка при записи в базу данных: " + std::string(e.what()) + " на хост "+ asio::ip::address_v4(host.address).to_string());
+        wlog->writeLog("Из-за ошибки записи в БД лог выкидываю сюда: "+ host.login.name + " " + host.model + "\n" + host.log);
+    }
+
+}
+
+std::vector<HOST> dbLite::read_from_databaseCommit(const std::string &TableName)
+{
+  std::vector<HOST> hosts;
+
+    try
+    {
+        // Подготавливаем запрос SELECT
+        SQLite::Statement query(*db, "SELECT  address, name, log, model FROM " + TableName + ";");
+
+        // Выполняем запрос и обрабатываем результаты
+        while (query.executeStep())
+        {
+            HOST host;
+            host.address = static_cast<uint32_t>(query.getColumn(0).getInt());
+            host.login.name = query.getColumn(1).getString();
+            host.log = query.getColumn(2).getString();
+            host.model = query.getColumn(3).getString();
+
+            hosts.push_back(host);
+        }
+
+        plog->writeLog("Данные успешно прочитаны из базы данных, таблица: " + TableName);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Ошибка при чтении из базы данных: " << e.what() << std::endl << "если не помогает show 'tablename' то попробуйте использовать средства просмотра бд sqlite\n";
+        plog->writeLog("Ошибка при чтении из базы данных: " + std::string(e.what()));
+        exit(1);
+    }
+
+    return std::move(hosts);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 std::unique_ptr<dbLite> sqlite;

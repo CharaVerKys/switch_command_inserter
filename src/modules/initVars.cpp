@@ -36,8 +36,8 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
         isWriteThisLog = true;
     }
     errHlog = std::make_unique<Logging>((executable_path / "errHosts.log").string(), isWriteThisLog);
-    gHlog = std::make_unique<GoodHostsLogging>((logs_directory / "goodHosts.log").string(),
-                                               (executable_path / "goodHosts.log").string(), isWriteThisLog);
+    gHlog = std::make_unique<GoodHostsLogging>((logs_directory / "goodHosts.log").string(),                   // я вообще мог бы это спокойно вставить внутрь, но не стану уже переделывать
+                                               (executable_path / "goodHosts.log").string(), isWriteThisLog); // просто идея как это должно работать поменялась
 
     // сразу же, как возможно, начинаю лог
     plog->writeLog("Программа стартовала");
