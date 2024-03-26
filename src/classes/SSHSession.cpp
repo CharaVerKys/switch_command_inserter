@@ -6,7 +6,7 @@ SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COM
     this->_iteration = 0;
     _IPstring = asio::ip::address_v4(_host.address).to_string();
     wlog->writeLog("Инициализирован коммит для " + _IPstring);
-    _timer.expires_after(std::chrono::minutes(15));
+    _timer.expires_after(std::chrono::seconds(5));
 }
 
 void SSHSession::connect()
@@ -257,7 +257,7 @@ void SSHSession::read_label()
         {
             _str = "Ошибка во время считывания лейбла(ssh) " + std::to_string(rc) + " аутпут(" + _part_of_ss.str() + ") " + " к хосту ";
             _host.log += ("\n" + _str);
-            plog->writeLog(_str + _IPstring);
+            plog->writeLog("Ошибка во время считывания лейбла(ssh) " + std::to_string(rc)+" " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
         }
         else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
@@ -281,7 +281,7 @@ void SSHSession::read_label()
                                    {
                                      _str = "Ошибка во время считывания лейбла(сокет) "+ec.message() + " аутпут(" + _part_of_ss.str() + ") " +" к хосту ";
                                     _host.log += ("\n"+_str); 
-                                    plog->writeLog(_str + _IPstring);
+                                    plog->writeLog("Ошибка во время считывания лейбла(сокет) "+ec.message()+" " + _IPstring);
                                     sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
                                     } });
         }
@@ -326,33 +326,33 @@ void SSHSession::execute_one_command() // вообще сделал что-то 
 {
     try
     {
-       std::string command = _currentDoCommands[_iteration].cmd + "\n"; // gpt подсказал так написать ввод
-libssh2_channel_write(_channel, command.c_str(), command.size());
+        std::string command = _currentDoCommands[_iteration].cmd + "\n"; // gpt подсказал так написать ввод
+        libssh2_channel_write(_channel, command.c_str(), command.size());
         _str = "Отправленна команда " + _currentDoCommands[_iteration].cmd;
         wlog->writeLog(_str + " для " + _IPstring);
 
         _is_end_of_readq = false;
         _one_again_taked = true; // чтобы выполнелась отправка первого энтера
-        
-                                    // таймер чтобы не блокировать всё приложение если не приходит ответ (время настраивать в конструкторе)
-                                        auto self = shared_from_this();
-                                    _timer.async_wait([this,self](const asio::error_code &er) {
+
+        // таймер чтобы не блокировать всё приложение если не приходит ответ (время настраивать в конструкторе)
+        auto self = shared_from_this();
+          _timer.async_wait([this, self](const asio::error_code &er)
+                          {
                                     if (!er) {
                                         // если таймер сработал, дроп подключения
 
-                                                        _str = "Ошибка: слишком долго нет ответа(таймаут), аутпут(" +_ss.str()+ _part_of_ss.str() + ") " ;
-                                                        _host.log += ("\n" + _str);
-                                                        plog->writeLog("Ошибка: слишком долго нет ответа(таймаут) к хосту "+ _IPstring);
-                                                        sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
-
+                                        _ss << "-----------------------------------------------------------\n"<<
+                                        "\tОшибка: слишком долго нет ответа(таймаут)\n"
+                                        <<"-----------------------------------------------------------\n";
+                                        plog->writeLog("Ошибка: слишком долго нет ответа(таймаут) к хосту "+ _IPstring);
+                                        // будет op aborted на текущем калбеке
                                         if (_socket.is_open()) {
                                             _socket.close();
                                         }
                                     }else{
                                         if (er != asio::error::operation_aborted) {
                                         plog->writeLog("ошибка таймера чтения в SSHSession: "+er.message()+" для хоста " + _IPstring);
-                                    }}
-                                    });
+                                    }} });
         read_one_command();
     }
     catch (const std::exception &e)
