@@ -3,7 +3,9 @@
 //
 //
 //
-
+void SSHSession::shortErrlog(std::string str){
+    std::cout <<"Error: " <<_IPstring << " " << _host.model << " "<< str << std::endl;
+}
 SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COMMANDS> &currentDoCommands)
     : _io_context(io_context), _host(host), _currentDoCommands(currentDoCommands), _socket(_io_context), _timer(_io_context)
 {
@@ -40,6 +42,7 @@ void SSHSession::connect()
                _host.log += ("\n"+_str); 
                plog->writeLog(_str + _IPstring);
                sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+               shortErrlog(_str);
             }
         }
         else
@@ -48,6 +51,7 @@ void SSHSession::connect()
                _host.log += ("\n"+_str); 
                plog->writeLog(_str + _IPstring);
                sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+               shortErrlog(_str);
         } });
     }
     catch (const std::exception &e)
@@ -85,6 +89,7 @@ void SSHSession::handshake()
                _host.log += ("\n"+_str); 
                plog->writeLog(_str + _IPstring);
                sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+               shortErrlog(_str);
             } });
         }
         else
@@ -93,6 +98,7 @@ void SSHSession::handshake()
             _host.log += ("\n" + _str);
             plog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog(_str);
         }
     }
     catch (const std::exception &e)
@@ -131,6 +137,7 @@ void SSHSession::authenticate()
                     _host.log += ("\n"+_str); 
                     plog->writeLog(_str + _IPstring);
                     sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+                    shortErrlog(_str);
                     } });
         }
         else if (аутен_result == -18)
@@ -139,6 +146,7 @@ void SSHSession::authenticate()
             _host.log += ("\n" + _str);
             wlog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForErrorHosts, _host);
+            shortErrlog(_str);
         }
         else
         {
@@ -146,6 +154,7 @@ void SSHSession::authenticate()
             _host.log += ("\n" + _str);
             plog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog(_str);
         }
     }
     catch (const std::exception &e)
@@ -185,6 +194,7 @@ void SSHSession::init_channel()
                                     _host.log += ("\n"+_str); 
                                     plog->writeLog(_str + _IPstring);
                                     sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+                                    shortErrlog(_str);
                                    } });
         }
         else
@@ -193,6 +203,7 @@ void SSHSession::init_channel()
             _host.log += ("\n" + _str);
             plog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog(_str);
         }
     }
     catch (const std::exception &e)
@@ -231,6 +242,7 @@ void SSHSession::init_shell()
                                     _host.log += ("\n"+_str); 
                                     plog->writeLog(_str + _IPstring);
                                     sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+                                    shortErrlog(_str);
                                      } });
         }
         else
@@ -239,6 +251,7 @@ void SSHSession::init_shell()
             _host.log += ("\n" + _str);
             plog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog(_str);
         }
     }
     catch (const std::exception &e)
@@ -265,6 +278,7 @@ void SSHSession::read_label()
             _host.log += ("\n" + _str);
             plog->writeLog("Ошибка во время считывания лейбла(ssh) " + std::to_string(rc) + " " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog(_str);
         }
         else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
         {
@@ -294,6 +308,7 @@ void SSHSession::read_label()
                                     _host.log += ("\n"+_str); 
                                     plog->writeLog("Ошибка во время считывания лейбла(сокет) "+ec.message()+" " + _IPstring);
                                     sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+                                    shortErrlog(_str);
                                     } });
         }
     }
@@ -315,6 +330,7 @@ void SSHSession::one_iteration()
             _host.log += ("\n" + _str);
             wlog->writeLog("Закончен цикл для хоста " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForGoodHosts, _host);
+             std::cout <<"Success: " <<_IPstring << " " << _host.model << " Закончен цикл для хоста"  << std::endl;
             return; // логика завершения, по идее должен вызвать деструктор прям ща
         }
         else
@@ -403,10 +419,11 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         }
         else if (rc < 0 && rc != LIBSSH2_ERROR_EAGAIN)
         {
-            _str = "Ошибка во время считывания чего-то, что не заканчивается на \"\\S+[#$>]\\s?$\"(ssh) " + std::to_string(rc) + " аутпут(" + _ss.str() + _part_of_ss.str() + ") ";
+            _str = "Ошибка во время считывания чего-то, что не заканчивается на _end_of_read(ssh) " + std::to_string(rc) + " аутпут(" + _ss.str() + _part_of_ss.str() + ") ";
             _host.log += ("\n" + _str);
-            plog->writeLog("Ошибка во время считывания чего-то, что не заканчивается на \"\\S+[#$>]\\s?$\"(ssh) " + std::to_string(rc) + " к хосту " + _IPstring);
+            plog->writeLog("Ошибка во время считывания чего-то, что не заканчивается на ожидаемое значение _end_of_read(ssh) " + std::to_string(rc) + " к хосту " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog("Ошибка во время считывания чего-то, что не заканчивается на ожидаемое значение _end_of_read(ssh) " + std::to_string(rc) + " к хосту ");
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены
         {
@@ -422,10 +439,11 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
                                    }
                                    else
                                    {
-        _str = "Ошибка во время считывания чего-то, что не заканчивается на \"\\S+[#$>]\\s?$\"(сокет) "+ec.message() + " аутпут(" +_ss.str()+ _part_of_ss.str() + ") "  ;
+        _str = "Ошибка во время считывания чего-то, что не заканчивается на _end_of_read(сокет) "+ec.message() + " аутпут(" +_ss.str()+ _part_of_ss.str() + ") "  ;
         _host.log += ("\n" + _str);
-        plog->writeLog("Ошибка во время считывания чего-то, что не заканчивается на \"\\S+[#$>]\\s?$\"(сокет) "+ec.message() +" к хосту "+ _IPstring);
+        plog->writeLog("Ошибка во время считывания чего-то, что не заканчивается на _end_of_read(сокет) "+ec.message() +" к хосту "+ _IPstring);
         sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+        shortErrlog("Ошибка во время считывания чего-то, что не заканчивается на _end_of_read(сокет) "+ec.message() +" к хосту ");
                                    } });
         }
     }
@@ -455,6 +473,7 @@ void SSHSession::read_one_command()
             _host.log += ("\n" + _str);
             plog->writeLog("Ошибка во время считывания ответа(ssh) " + std::to_string(rc) + " к хосту " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog("Ошибка во время считывания ответа(ssh) " + std::to_string(rc) + " к хосту ");
         }
 
         else if (_is_end_of_readq) // главное чтобы проверка была до открытия сокета
@@ -479,6 +498,8 @@ void SSHSession::read_one_command()
         _host.log += ("\n" + _str);
         plog->writeLog("Ошибка во время считывания ответа(сокет) "+ec.message() +" к хосту "+ _IPstring);
         sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+            shortErrlog("Ошибка во время считывания ответа(сокет) " + ec.message() + " к хосту ");
+
                                    } });
         }
     }
@@ -500,6 +521,7 @@ void SSHSession::end_one_command()
         {
             _str = "Неверный код результата для команды" + _currentDoCommands[_iteration].cmd + ". Ожидалось" + std::to_string(_currentDoCommands[_iteration].code) + ", а в ответе" + std::to_string(_cmd_exit_status);
             wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в errHosts.log");
+            shortErrlog(_str);
             _str += "\n\n" + _ss.str() + _part_of_ss.str();
             _host.log += ("\n" + _str);
             sqlite->write_one_hostCommit(TableNameForErrorHosts, _host);
@@ -516,6 +538,7 @@ void SSHSession::end_one_command()
 
                 _str = "неожиданный output команды " + _currentDoCommands[_iteration].cmd;
                 wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в errHosts.log");
+                shortErrlog(_str);
                 _str += ". Ожидалось: " + _currentDoCommands[_iteration].expect + "\n\n А в ответе: " + _part_of_ss.str();
                 _str += "\n\n\n" + _ss.str() + _part_of_ss.str();
                 _host.log += ("\n" + _str);
@@ -534,6 +557,7 @@ void SSHSession::end_one_command()
 
                 _str = "неожиданный output команды " + _currentDoCommands[_iteration].cmd;
                 wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в errHosts.log");
+                shortErrlog(_str);
                 _str += ". Ожидалось не получить: " + _currentDoCommands[_iteration].not_expect + "\n\n А в ответе: " + _part_of_ss.str();
                 _str += "\n\n\n" + _ss.str() + _part_of_ss.str();
                 _host.log += ("\n" + _str);

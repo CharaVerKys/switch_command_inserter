@@ -201,7 +201,7 @@ void commit()
         auto goodHosts = sqlite->read_from_databaseCommit(TableNameForGoodHosts);
         for (HOST &host : goodHosts)
         {
-            gHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tЛогин: " + host.model + "\n_______________\nЛог:\n" + host.log);
+            gHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tМодель: " + host.model + "\n_______________\nЛог:\n" + host.log);
         }
         // так же добавляю в игнор хостс
         configer->updateNetwork_conf(goodHosts);
@@ -211,7 +211,7 @@ void commit()
         auto errHosts = sqlite->read_from_databaseCommit(TableNameForErrorHosts);
         for (HOST &host : errHosts)
         {
-            errHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tЛогин: " + host.model + "\n_______________\nЛог:\n" + host.log);
+            errHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tМодель: " + host.model + "\n_______________\nЛог:\n" + host.log);
         }
     }
     if (sqlite->isTableExist(TableNameForProgErrorHosts))
@@ -220,7 +220,7 @@ void commit()
         errHlog->writeLog("\n\n\t\tДалее идут ошибки связанные с программными проблемами\n\n");
         for (HOST &host : perrHosts)
         {
-            errHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tЛогин: " + host.model + "\n_______________\nЛог:\n" + host.log);
+            errHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tМодель: " + host.model + "\n_______________\nЛог:\n" + host.log);
         }
     }
 }

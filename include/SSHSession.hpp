@@ -45,4 +45,5 @@ private:
     void check_end_of_read(uint16_t buffer_point_add);
     void read_one_command();
     void end_one_command();
+    void shortErrlog(std::string str);
 };
