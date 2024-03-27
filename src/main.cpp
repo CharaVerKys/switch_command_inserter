@@ -17,8 +17,12 @@ int main(const int argc, char const *argv[])
     // для уникальности сделал чтото типо особого имени
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
     // тут что-то было, пока я не вынес в отдельные функции (например rootScan)
+  std::string username = "user\r\n";
+    std::string password = "password\r\n";
 
 
+
+    
     SWITCH(argv[1]) // в этом свиче нельзя создавать объекты, только операции с ними
     {
         CASE("scan") : // я без понятия почему формотирование вызывает такой баг, в данном случае для табуляций к rootScan (VScode 1.86.2 flatpack )
@@ -28,6 +32,31 @@ int main(const int argc, char const *argv[])
         break; // конец scan
 
         CASE("identify") : //
+
+
+ // asio::io_context io;
+// 
+    // asio::ip::tcp::resolver resolver(io);
+// 
+    // auto endpoints = resolver.resolve("127.0.0.1", "telnet");
+// 
+    // asio::ip::tcp::socket socket(io);
+// 
+    // asio::connect(socket, endpoints);
+// 
+  // 
+// 
+    // asio::write(socket, asio::buffer(username));
+    // asio::write(socket, asio::buffer(password));
+// 
+    // std::array<char, 128> buffer;
+    // size_t bytes_received = socket.read_some(asio::buffer(buffer));
+// 
+    // std::cout << "Server response: " << std::string(buffer.data(), bytes_received) << std::endl;
+// 
+    // socket.close();
+
+
 
 
 

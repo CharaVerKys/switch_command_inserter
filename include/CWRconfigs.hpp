@@ -18,14 +18,17 @@ struct COMMANDS
     std::string cmd;
     std::string expect;
     uint8_t code;
+    std::string not_expect;
 
     COMMANDS(){}
     COMMANDS(const std::string &cmd,
              const std::string &expect,
-             const uint8_t &code) : //
+             const uint8_t &code,
+             const std::string &not_expect) : //
                                     code(code),
                                     cmd(cmd),
-                                    expect(expect)
+                                    expect(expect),
+                                    not_expect(not_expect)
     {
     }
 };

@@ -375,26 +375,23 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
     { // обработчик проверки получения всех отправленных данных
         if (std::regex_search(_buffer, _buffer + buffer_point_add, _end_of_read))
         {
-
             _is_end_of_readq = true;
             return;
         }
-        if (!(std::regex_search(_buffer, _buffer + buffer_point_add, _moreRegex)))
+        if (!(std::regex_search(_buffer, _buffer + buffer_point_add, _moreRegex))&&_one_again_taked)
         {
             return;
         }
         // else contunue
-
         if (_one_again_taked)
         {
-            libssh2_channel_write(_channel, "\x20", 1); 
+
+            libssh2_channel_write(_channel, " \n", 2); 
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
 
         if (rc > 0)
         {
-	
-
             _part_of_ss.write(_buffer, rc);
             _one_again_taked = true;
             check_end_of_read(rc);
@@ -408,13 +405,11 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены
         {
-
             _one_again_taked = false; // это цикличное ожидание, не нужно отправлять нужный энтер
             auto self = shared_from_this();
 
             _socket.async_wait(asio::ip::tcp::socket::wait_read, [this, self, rc](const asio::error_code &ec)
                                {
-
                                    if (!ec)
                                    {
 
@@ -523,6 +518,25 @@ void SSHSession::end_one_command()
                 return;
             }
         }
+
+         // проверить ответ на равенство не ожидаемому
+        if (_currentDoCommands[_iteration].not_expect != "")
+        {
+            _not_expect = std::regex(_currentDoCommands[_iteration].not_expect); // содержет строку в которой описана регулярка
+            if ((std::regex_search(_part_of_ss.str(), _not_expect)))
+            {
+                // если не (регулярки совпадают) то выкинуть ошибку
+
+                _str = "неожиданный output команды " + _currentDoCommands[_iteration].cmd;
+                wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в errHosts.log");
+                _str += ". Ожидалось не получить: " + _currentDoCommands[_iteration].not_expect + "\n\n А в ответе: " + _part_of_ss.str();
+                _str += "\n\n\n" + _ss.str() + _part_of_ss.str();
+                _host.log += ("\n" + _str);
+                sqlite->write_one_hostCommit(TableNameForErrorHosts, _host);
+                return;
+            }
+        }
+
 
         _ss << _part_of_ss.str();
         _part_of_ss.str("");

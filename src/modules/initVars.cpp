@@ -31,7 +31,7 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
 
     // писать эти логи только если параметр запуска комит
     bool isWriteThisLog = false;
-    if (argc >= 2 && std::string(argv[1]) == "commit")
+    if (argc >= 2 && (std::string(argv[1]) == "commit" || std::string(argv[1]) == "script") )
     {
         isWriteThisLog = true;
     }
