@@ -7,7 +7,7 @@ int main(const int argc, char const *argv[])
     if (argc < 2)
     {
         std::cerr << "Необходимо передать глагол в качестве аргумента.\n"
-                  << "Доступные глаголы: scan, identify, showssh, commit. Допустимо 'scan identify'" << std::endl;
+                  << "Доступные глаголы: scan, identify, script, commit. Допустимо 'scan identify'" << std::endl;
         std::exit(1);
     }
 
@@ -17,12 +17,7 @@ int main(const int argc, char const *argv[])
     // для уникальности сделал чтото типо особого имени
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
     // тут что-то было, пока я не вынес в отдельные функции (например rootScan)
-HOST host;
-std::vector<HOST> oneHost;
-std::string str0;
-std::string str1;
-std::string str2;
-std::string str3;
+
 
     SWITCH(argv[1]) // в этом свиче нельзя создавать объекты, только операции с ними
     {
@@ -35,17 +30,6 @@ std::string str3;
         CASE("identify") : //
 
 
-std::cin >> str0;
-std::cin >> str1;
-std::cin >> str2;
-std::cin >> str3;
-host.address = ipToBin(str0);
-host.login.name="str1";
-host.login.password = "str2";
-host.model="str3";
-oneHost.push_back(host);
-sqlite->write_to_database(TableNameForSSH,oneHost);
-
 
                            break; // конец identify
 
@@ -53,55 +37,17 @@ sqlite->write_to_database(TableNameForSSH,oneHost);
                          rootCommit(argc, argv);
         break;            // конец commit
                           //
-                          //
-                          //
-                          //
-                          //
-                          //
-                          //
-        CASE("showssh") : // если нет существительного выдать exit 1 и сообщение
-                          if (argc < 3)
-        {
-            std::cerr << "Необходимо ещё передать существительное в качестве аргумента.\n"
-                      << "Доступные существительные: modelHost, goodHosts, errHosts, PerrHosts." << std::endl;
-            std::exit(1);
-        }
+                         
+                 
 
-        SWITCH(argv[2])
-        {
-            CASE("modelHost") : // максимум 9 символов для работы хеш функции
-                                // возвращает поимённый список хост-модель-логин
-                                // надо реализовать так, чтобы в начале шли хосты, где не указана модель, но при этом есть логин
-                                // а потом уже шли те где ни модели ни пароля
-                                // и в конце те где указано всё
+		CASE("script") : //
+                         rootScript(argc, argv);
+      	break;            // конец script
 
-                                break; // конец modelHost
-
-            CASE("goodHosts") : // возвращает список всех пройденных хостов, чтобы добавить их в исключения при повторном запуске, если решим запускать так
-
-                                break; // конец goodHosts
-
-            CASE("errHosts") : // возвращает список хостов где произошло неожиданное поведение
-
-                               break; // конец errHosts
-
-            CASE("PerrHosts") : // возвращает список хостов, где произошла программная ошибка (не открылся сокет, не подошёл пароль и т.п.)
-
-                                break; // конец PerrHosts
-
-        default: // выдать ошибку о несоотвествии существительного
-            break;
-        }
-        break; // конец show
-               //
-               //
-               //
-               //
-               //
 
     default: // выдать ошибку о несоотвествии глагола
         std::cerr << "Неправильный глагол в качестве аргумента.\n"
-                  << "Доступные глаголы: scan, identify, showssh, commit. Допустимо 'scan identify'" << std::endl;
+                  << "Доступные глаголы: scan, identify, script, commit. Допустимо 'scan identify'" << std::endl;
         std::exit(1);
         break;
     }

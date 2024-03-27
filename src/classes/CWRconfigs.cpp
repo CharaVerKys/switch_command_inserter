@@ -22,6 +22,22 @@ Configer::Configer(const std::filesystem::path &executable_path) : executable_pa
         }
         plog->writeLog("Созданн пример perModel_doCommands.conf");
     }
+    if (!std::filesystem::exists(executable_path / "configs" / "scriptIp.list"))
+    {
+        if (!create_scriptIpList())
+        {
+            std::cerr << "Failed to create scriptIp.list.\n";
+            exit(EACCES);
+        }
+        plog->writeLog("Созданн пример scriptIp.list");
+    }
+
+    if (!read_scriptIpList())
+    {
+        std::cerr << "Failed to read scriptIp.list.\n";
+        exit(ENOENT);
+    }
+    plog->writeLog("Считан конфиг scriptIp.list");
 
     // и теперь открыть их и считать
     if (!read_networkconf())
@@ -195,6 +211,88 @@ bool Configer::create_perModel_doCommandsconf()
     return true;
 }
 
+bool Configer::create_scriptIpList()
+{
+    _scriptIpList.open(executable_path / "configs" / "scriptIp.list", std::ios::out);
+
+    const char *example = R"(192.168.8.1;192.168.8.2;
+10.90.90.90;
+10.90.90.100;172.16.0.1;172.16.0.2;192.168.1.1;
+192.168.1.2;
+10.0.0.1;10.0.0.2;
+
+192.168.0.1;192.168.0.2;
+172.31.0.1;
+172.31.0.2;10.1.1.1;
+
+10.1.1.2;192.168.2.1;192.168.2.2;
+172.17.0.1;172.17.0.2;)";
+
+    if (!_scriptIpList.is_open())
+    {
+        std::cerr << "Файл scriptIp.list не открыт. \n Странная ошибка учитывая контекст." << std::endl;
+        return false;
+    }
+    _scriptIpList << example;
+    if (!_scriptIpList)
+    {
+        std::cerr << "Ошибка при записи в файл scriptIp.list.\n Понятия не имею что вообще может пойти не так, не буду даже обрабатывать ошибку" << std::endl;
+        return false;
+    }
+    _scriptIpList.close();
+    if (_scriptIpList.is_open())
+    {
+        std::cerr << "Файл scriptIp.list всё ещё открыт, хотя не должен. \n Крайне вероятно возникновение дополнительных ошибок!!" << std::endl;
+    }
+
+    return true;
+}
+
+bool Configer::read_scriptIpList()
+{
+
+    plog->writeLog("Считывается конфиг scriptIp.list");
+
+    _scriptIpList.open(executable_path / "configs" / "scriptIp.list", std::ios::in);
+    if (!_scriptIpList.is_open())
+    {
+        std::cerr << "Failed to open file scriptIp.list." << std::endl;
+        return false;
+    }
+
+    auto parse = [](std::string line)
+    {
+        std::vector<std::string> ips;
+        std::string ip;
+        std::istringstream iss(line);
+        while (std::getline(iss, ip, ';'))
+        {
+            ips.push_back(ip);
+        }
+        return ips;
+    };
+
+    std::string line;
+    while (std::getline(_scriptIpList, line))
+    {
+
+        std::vector<std::string> ips = parse(line);
+
+        for (const auto &ip : ips)
+        {
+            if (ip.size() > 0 && ip.find_first_not_of("0123456789.") == std::string::npos)
+            {
+                _sIpList.push_back(ip);
+            }
+            else
+            {
+                std::cerr << "Неправильное IP: " << ip << std::endl;
+            }
+        }
+    }
+    return true;
+}
+
 bool Configer::read_networkconf()
 {
     plog->writeLog("Считывается конфиг network.conf");
@@ -304,7 +402,7 @@ bool Configer::read_perModel_doCommandsconf()
     {
         jsonStr += line;
     }
-      _perModel_doCommandsconf.close();
+    _perModel_doCommandsconf.close();
     // пропарсинг строки для дальнейшего извлечения данных
     rapidjson::Document doc;
     doc.Parse(jsonStr.c_str());
@@ -362,7 +460,6 @@ bool Configer::read_perModel_doCommandsconf()
         _models_and_commands.push_back(Model_and_Commands_i);
     }
 
-  
     if (_perModel_doCommandsconf.is_open())
     {
         std::cerr << "Файл perModel_doCommands.conf всё ещё открыт, хотя не должен." << std::endl;
@@ -395,10 +492,16 @@ Configer::getModels_and_commands() const
     return _models_and_commands;
 }
 
+const std::vector<std::string> &Configer::getScriptIpList(){
+   return _sIpList;
+}
+
 const std::vector<std::string> &Configer::getIgnoringHosts()
 {
     return _ignoreHosts;
 }
+
+// а ври эти вот делают
 
 bool Configer::updateNetwork_conf(std::vector<HOST> &goodHosts)
 {
@@ -411,15 +514,16 @@ bool Configer::updateNetwork_conf(std::vector<HOST> &goodHosts)
         std::cerr << "Failed to open config file network.conf. (for modify)" << std::endl;
         return false;
     }
-// Создание JSON объекта
+    // Создание JSON объекта
     rapidjson::Document doc;
     doc.SetObject();
 
-rapidjson::Value network(_IpMask.c_str(), doc.GetAllocator());
+    rapidjson::Value network(_IpMask.c_str(), doc.GetAllocator());
     doc.AddMember("network", network, doc.GetAllocator());
 
     rapidjson::Value logins(rapidjson::kArrayType);
-    for (const auto& login_password : _Logins_Passwords) {
+    for (const auto &login_password : _Logins_Passwords)
+    {
         rapidjson::Value login_object(rapidjson::kObjectType);
         rapidjson::Value login(login_password.first.c_str(), doc.GetAllocator());
         rapidjson::Value password(login_password.second.c_str(), doc.GetAllocator());
@@ -429,28 +533,27 @@ rapidjson::Value network(_IpMask.c_str(), doc.GetAllocator());
     }
     doc.AddMember("logins", logins, doc.GetAllocator());
 
-
-// начинаю заполнять хосты
+    // начинаю заполнять хосты
     rapidjson::Value ignorehosts(rapidjson::kArrayType);
 
-    for (const auto& ignoreHost : _ignoreHosts) {
+    for (const auto &ignoreHost : _ignoreHosts)
+    {
         rapidjson::Value host(ignoreHost.c_str(), doc.GetAllocator());
         ignorehosts.PushBack(host, doc.GetAllocator());
     }
 
-
-// добавляю хосты из goodHosts
- for (const auto& goodHost : goodHosts) {
-        const char* host_str = asio::ip::address_v4(goodHost.address).to_string().c_str();
+    // добавляю хосты из goodHosts
+    for (const auto &goodHost : goodHosts)
+    {
+        const char *host_str = asio::ip::address_v4(goodHost.address).to_string().c_str();
         rapidjson::Value host(host_str, doc.GetAllocator());
         ignorehosts.PushBack(host, doc.GetAllocator());
     }
 
-
     doc.AddMember("ignorehosts", ignorehosts, doc.GetAllocator());
 
     // Запись JSON объекта в файл
-   
+
     rapidjson::StringBuffer buffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> prettyWriter(buffer);
     doc.Accept(prettyWriter);
@@ -458,17 +561,11 @@ rapidjson::Value network(_IpMask.c_str(), doc.GetAllocator());
     _networkconf << buffer.GetString() << std::endl;
     _networkconf.close();
 
-
-
-
-
-
-
-if (_networkconf.is_open())
+    if (_networkconf.is_open())
     {
         std::cerr << "Файл network.conf всё ещё открыт, хотя не должен. (for modify)" << std::endl;
     }
-
+    plog->writeLog("Изменил конфиг network.conf");
     return true;
 }
 

@@ -37,11 +37,15 @@ class Configer
     bool create_perModel_doCommandsconf();
     bool read_networkconf();
     bool read_perModel_doCommandsconf();
+    bool read_scriptIpList();
+    bool create_scriptIpList();
 
+    std::fstream _scriptIpList;
     std::fstream _networkconf;
     std::fstream _perModel_doCommandsconf;
     std::filesystem::path executable_path;
 
+std::vector<std::string> _sIpList;
     std::vector<std::string> _ignoreHosts;
     std::vector<std::pair<std::string, std::string>> _Logins_Passwords;
     std::string _IpMask;
@@ -59,6 +63,7 @@ public:
     const std::vector<std::string> &getIgnoringHosts();
     const std::string &getIpMask() const;
     const std::vector<std::pair<std::string, std::string>> &getLogins_Passwords() const;
+    const std::vector<std::string> &getScriptIpList();
     bool updateNetwork_conf(std::vector<HOST> &goodHosts);
 
     const std::vector<            // вектор для отправки в обработчик

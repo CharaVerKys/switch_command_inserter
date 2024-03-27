@@ -1,5 +1,9 @@
 #include <SSHSession.hpp>
 
+//
+//
+//
+
 SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COMMANDS> &currentDoCommands)
     : _io_context(io_context), _host(host), _currentDoCommands(currentDoCommands), _socket(_io_context), _timer(_io_context)
 {
@@ -8,6 +12,8 @@ SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COM
     wlog->writeLog("Инициализирован коммит для " + _IPstring);
     _timer.expires_after(std::chrono::minutes(15));
 }
+
+//
 
 void SSHSession::connect()
 {
@@ -369,6 +375,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
     { // обработчик проверки получения всех отправленных данных
         if (std::regex_search(_buffer, _buffer + buffer_point_add, _end_of_read))
         {
+
             _is_end_of_readq = true;
             return;
         }
@@ -380,12 +387,14 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
 
         if (_one_again_taked)
         {
-            libssh2_channel_write(_channel, "\n", strlen("\n"));
+            libssh2_channel_write(_channel, "\x20", 1); 
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
 
         if (rc > 0)
         {
+	
+
             _part_of_ss.write(_buffer, rc);
             _one_again_taked = true;
             check_end_of_read(rc);
@@ -399,13 +408,17 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены
         {
+
             _one_again_taked = false; // это цикличное ожидание, не нужно отправлять нужный энтер
             auto self = shared_from_this();
+
             _socket.async_wait(asio::ip::tcp::socket::wait_read, [this, self, rc](const asio::error_code &ec)
                                {
+
                                    if (!ec)
                                    {
-                                       check_end_of_read(rc);
+
+                                       check_end_of_read(0);
                                    }
                                    else
                                    {

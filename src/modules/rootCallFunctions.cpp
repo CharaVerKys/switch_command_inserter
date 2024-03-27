@@ -1,6 +1,85 @@
 #include <main.hpp>
 
+void areYouAgreeq();
+void commit();
+void emptyOutTables();
+void rootCommandsCommit(asio::io_context &io_context,
+                        std::vector<HOST> &validForCommitHosts,
+                        std::vector<std::pair<std::string, std::vector<COMMANDS>>> models_and_commands,
+                        std::vector<std::shared_ptr<SSHSession>> &sessions);
 ActiveHOSTS rootDoCommandsScan();
+
+void rootScript(int argc, char const *argv[])
+{
+
+    plog->writeLog("Запущено с глаголом script");
+
+    std::string login;
+    std::string password;
+    std::getline(std::cin, login);
+    std::getline(std::cin, password);
+
+    std::vector<HOST> hosts;
+    auto ipList = configer->getScriptIpList();
+    for (auto &ip : ipList)
+    {
+        HOST host;
+        host.address = ipToBin(ip);
+        host.login.name = login;
+        host.login.password = password;
+        host.model = "script";
+        hosts.push_back(host);
+    }
+    plog->writeLog("Инициализирован вектор хостов");
+
+    if (sqlite->isTableExist(TableNameForSSH)) // удаляю непосредственно перед использованием
+    {
+        sqlite->emptyOut(TableNameForSSH);
+    }
+    sqlite->write_to_database(TableNameForSSH, hosts);
+
+    plog->writeLog("Данные записаны");
+
+    if (!(argc > 2 && std::string(argv[2]) == "-y"))
+    {
+        std::cout << "Данные записаны, продолжить (commit)?  (Yes/no)" << std::endl;
+        std::string S_answer;
+        std::getline(std::cin, S_answer);
+
+        while (S_answer == "yes" || S_answer == "YES")
+        {
+            std::cout << "Пожалуйста ответьте в нужном регистре ( Yes )\n";
+            std::getline(std::cin, S_answer);
+        }
+
+        if (S_answer == "Yes")
+        {
+            plog->writeLog("Запущен commit из script");
+            areYouAgreeq();
+            commit();
+            plog->writeLog("Программа завершила работу");
+            exit(0);
+        }
+        else
+        {
+            std::cout << "Отменено пользоваталем" << std::endl;
+            plog->writeLog("Отменено пользоваталем");
+            plog->writeLog("Программа завершила работу");
+            exit(0); // более понятно чем return 0;
+        }
+    }
+    //
+    else
+    // если параметр -y
+    {
+        plog->writeLog("Запущено с -y");
+        commit();
+
+        plog->writeLog("Программа завершила работу");
+        exit(0);
+    }
+}
+
 void rootScan(int argc, char const *argv[])
 {
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
@@ -60,11 +139,6 @@ ActiveHOSTS rootDoCommandsScan()
 //
 //                                                  commit
 //
-void emptyOutTables();
-void rootCommandsCommit(asio::io_context &io_context,
-                        std::vector<HOST> &validForCommitHosts,
-                        std::vector<std::pair<std::string, std::vector<COMMANDS>>> models_and_commands,
-                        std::vector<std::shared_ptr<SSHSession>> &sessions);
 void rootCommit(int argc, char const *argv[])
 {
     plog->writeLog("Запущено с глаголом commit");
@@ -76,28 +150,40 @@ void rootCommit(int argc, char const *argv[])
     }
     else
     {
-        std::cout << "\nЭта программа лишь вводит команды и проверяет ответ, она не оснащена средствами отмены действий или что-то типо того."
-                  << "\nЗапуская применение команд вы отказываетесь от притензий к разработчику, в том случае если ошибка не связанна непосредственно с программным кодом."
-                  << "\nФайл goodHosts.log перед запуском нового набора команд нужно удалить ВРУЧНУЮ, он просто дозаписывает не проверяя."
-                  << "\nХотите начать применение команд? (Требуется выполненная идентификация) (Yes/no)\n";
-        std::string C_answer;
+        areYouAgreeq();
+    }
+    commit();
+
+    plog->writeLog("Программа завершила работу");
+    exit(0); // более понятно чем return 0;
+}
+
+void areYouAgreeq() // если согласие то просто пропускает код дальше, иначе закрытие программы
+{
+    std::cout << "\nЭта программа лишь вводит команды и проверяет ответ, она не оснащена средствами отмены действий или что-то типо того."
+              << "\nЗапуская применение команд вы отказываетесь от притензий к разработчику, в том случае если ошибка не связанна непосредственно с программным кодом."
+              << "\nФайл goodHosts.log перед запуском нового набора команд нужно удалить ВРУЧНУЮ, он просто дозаписывает не проверяя."
+              << "\nХотите начать применение команд? (Требуется выполненная идентификация) (Yes/no)\n";
+    std::string C_answer;
+    std::getline(std::cin, C_answer);
+
+    while (C_answer == "yes" || C_answer == "YES")
+    {
+        std::cout << "Пожалуйста ответьте в нужном регистре ( Yes )\n";
         std::getline(std::cin, C_answer);
-
-        while (C_answer == "yes" || C_answer == "YES")
-        {
-            std::cout << "Пожалуйста ответьте в нужном регистре ( Yes )\n";
-            std::getline(std::cin, C_answer);
-        }
-
-        if (!(C_answer == "Yes"))
-        {
-            std::cout << "Отменено пользоваталем" << std::endl;
-            plog->writeLog("Отменено пользоваталем");
-            plog->writeLog("Программа завершила работу");
-            exit(0); // более понятно чем return 0;
-        }
     }
 
+    if (!(C_answer == "Yes"))
+    {
+        std::cout << "Отменено пользоваталем" << std::endl;
+        plog->writeLog("Отменено пользоваталем");
+        plog->writeLog("Программа завершила работу");
+        exit(0); // более понятно чем return 0;
+    }
+}
+
+void commit()
+{
     plog->writeLog("Запущен коммит");
     emptyOutTables(); // обнуляю таблицы перед записью в них
     std::vector<std::shared_ptr<SSHSession>> sessions;
@@ -113,15 +199,17 @@ void rootCommit(int argc, char const *argv[])
         auto goodHosts = sqlite->read_from_databaseCommit(TableNameForGoodHosts);
         for (HOST &host : goodHosts)
         {
-            gHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model+"\n"+host.log);
+            gHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model + "\n" + host.log);
         }
+        // так же добавляю в игнор хостс
+        configer->updateNetwork_conf(goodHosts);
     }
     if (sqlite->isTableExist(TableNameForErrorHosts))
     {
         auto errHosts = sqlite->read_from_databaseCommit(TableNameForErrorHosts);
         for (HOST &host : errHosts)
         {
-            errHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model+"\n"+host.log);
+            errHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model + "\n" + host.log);
         }
     }
     if (sqlite->isTableExist(TableNameForProgErrorHosts))
@@ -130,13 +218,11 @@ void rootCommit(int argc, char const *argv[])
         errHlog->writeLog("\n\n\t\tДалее идут ошибки связанные с программными проблемами\n\n");
         for (HOST &host : perrHosts)
         {
-            errHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model+"\n"+host.log);
+            errHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model + "\n" + host.log);
         }
     }
-
-    plog->writeLog("Программа завершила работу");
-    // само закроется нормально   exit(0); // более понятно чем return 0;
 }
+
 void emptyOutTables()
 {
     if (sqlite->isTableExist(TableNameForGoodHosts)) // обнуляю таблицы перед записью в них

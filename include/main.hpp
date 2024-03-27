@@ -12,13 +12,13 @@
 #include <database.hpp>
 #include <headerlibSwitchCase.hpp>
 // #include <logging.hpp> // уже добавил в CWRconfigs.hpp, чисто на всякий случай закоментил
-
 // initVars.cpp
 void initVars(std::filesystem::path executable_path, const int &argc, char const *argv[]);
 
 // rootCallFunctions.cpp
 void rootScan(int argc, char const *argv[]);
 void rootCommit(int argc, char const *argv[]);
+void rootScript(int argc, char const *argv[]);
 
 // scanNetwork.cpp
 struct SNparsedNetworkHost
