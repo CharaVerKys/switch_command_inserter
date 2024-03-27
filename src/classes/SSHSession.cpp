@@ -263,7 +263,7 @@ void SSHSession::read_label()
         {
             _str = "Ошибка во время считывания лейбла(ssh) " + std::to_string(rc) + " аутпут(" + _part_of_ss.str() + ") " + " к хосту ";
             _host.log += ("\n" + _str);
-            plog->writeLog("Ошибка во время считывания лейбла(ssh) " + std::to_string(rc)+" " + _IPstring);
+            plog->writeLog("Ошибка во время считывания лейбла(ssh) " + std::to_string(rc) + " " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
         }
         else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
@@ -342,7 +342,7 @@ void SSHSession::execute_one_command() // вообще сделал что-то 
 
         // таймер чтобы не блокировать всё приложение если не приходит ответ (время настраивать в конструкторе)
         auto self = shared_from_this();
-          _timer.async_wait([this, self](const asio::error_code &er)
+        _timer.async_wait([this, self](const asio::error_code &er)
                           {
                                     if (!er) {
                                         // если таймер сработал, дроп подключения
@@ -378,7 +378,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
             _is_end_of_readq = true;
             return;
         }
-        if (!(std::regex_search(_buffer, _buffer + buffer_point_add, _moreRegex))&&_one_again_taked)
+        if (!(std::regex_search(_buffer, _buffer + buffer_point_add, _moreRegex)) && _one_again_taked)
         {
             return;
         }
@@ -386,7 +386,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         if (_one_again_taked)
         {
 
-            libssh2_channel_write(_channel, " \n", 2); 
+            libssh2_channel_write(_channel, " \n", 2);
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
 
@@ -519,7 +519,7 @@ void SSHSession::end_one_command()
             }
         }
 
-         // проверить ответ на равенство не ожидаемому
+        // проверить ответ на равенство не ожидаемому
         if (_currentDoCommands[_iteration].not_expect != "")
         {
             _not_expect = std::regex(_currentDoCommands[_iteration].not_expect); // содержет строку в которой описана регулярка
@@ -536,7 +536,6 @@ void SSHSession::end_one_command()
                 return;
             }
         }
-
 
         _ss << _part_of_ss.str();
         _part_of_ss.str("");

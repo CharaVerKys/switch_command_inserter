@@ -8,9 +8,7 @@ class SSHSession : public std::enable_shared_from_this<SSHSession>
     HOST &_host;
     std::vector<COMMANDS> _currentDoCommands;
 
-
-
-asio::steady_timer _timer;
+    asio::steady_timer _timer;
     asio::ip::tcp::socket _socket;
     std::string _IPstring;
     LIBSSH2_SESSION *_session;
@@ -23,7 +21,7 @@ asio::steady_timer _timer;
     char _buffer[1048576];
     int _cmd_exit_status;
     std::regex _expect;
-        std::regex _not_expect;
+    std::regex _not_expect;
     std::regex _end_of_read = std::regex("\\S+[#$>]\\s?$", std::regex::ECMAScript);
     std::regex _moreRegex = std::regex("(More)|(Next\\sEntry)", std::regex::ECMAScript);
     size_t _iteration;
