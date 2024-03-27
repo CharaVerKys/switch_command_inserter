@@ -272,6 +272,11 @@ void SSHSession::read_label()
             _str = "Успешное считывание лейбла к хосту ";
             _host.log += ("\n" + _str);
             wlog->writeLog(_str + _IPstring);
+
+             // Добавляю в начало стрима, чтобы отделить то что будет в логе от верхнего аутпута, где будет неожиданное поведение
+            _writableCommand = "\n\n\n--------------------------------------------------------\n\tОтправленные команды и полученные ответы:\n\n";
+            _ss << _writableCommand;
+
             one_iteration();
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены
@@ -315,7 +320,7 @@ void SSHSession::one_iteration()
         else
         {
             // выполняю командe
-            _writableCommand = "\n\nотправленна команда\t " + _currentDoCommands[_iteration].cmd + " \n\tРезультат:\n";
+            _writableCommand = "\n........................................................................................\n\nотправленна команда\t " + _currentDoCommands[_iteration].cmd + " \n\tРезультат:\n";
             _ss << _writableCommand;
             execute_one_command();
         }

@@ -16,7 +16,9 @@ void rootScript(int argc, char const *argv[])
 
     std::string login;
     std::string password;
+    std::cout << "Введите логин: ";
     std::getline(std::cin, login);
+    std::cout << "Введите пароль: ";
     std::getline(std::cin, password);
 
     std::vector<HOST> hosts;
@@ -199,7 +201,7 @@ void commit()
         auto goodHosts = sqlite->read_from_databaseCommit(TableNameForGoodHosts);
         for (HOST &host : goodHosts)
         {
-            gHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model + "\n" + host.log);
+            gHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tЛогин: " + host.model + "\n_______________\nЛог:\n" + host.log);
         }
         // так же добавляю в игнор хостс
         configer->updateNetwork_conf(goodHosts);
@@ -209,7 +211,7 @@ void commit()
         auto errHosts = sqlite->read_from_databaseCommit(TableNameForErrorHosts);
         for (HOST &host : errHosts)
         {
-            errHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model + "\n" + host.log);
+            errHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tЛогин: " + host.model + "\n_______________\nЛог:\n" + host.log);
         }
     }
     if (sqlite->isTableExist(TableNameForProgErrorHosts))
@@ -218,7 +220,7 @@ void commit()
         errHlog->writeLog("\n\n\t\tДалее идут ошибки связанные с программными проблемами\n\n");
         for (HOST &host : perrHosts)
         {
-            errHlog->writeLog(asio::ip::address_v4(host.address).to_string() + "\t" + host.login.name + "\n\t\t" + host.model + "\n" + host.log);
+            errHlog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\n\t\tЛогин: " + host.model + "\n_______________\nЛог:\n" + host.log);
         }
     }
 }
