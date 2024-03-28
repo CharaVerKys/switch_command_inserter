@@ -3,15 +3,18 @@
 //
 //
 //
-void SSHSession::shortErrlog(std::string str){
- if(_host.model == "script"){
-             std::cout <<"Error: " <<"Хост номер("<< _host.number <<") " <<_IPstring << " " << _host.model << " "<< str << std::endl;
-			}else{
-				             std::cout <<"Error: " <<_IPstring << " " << _host.model << " "<< str << std::endl;
-			}
+void SSHSession::shortErrlog(std::string str)
+{
+    if (_host.model == "script")
+    {
+        std::cout << "Error: "
+                  << "Хост номер(" << _host.number << ") " << _IPstring << " " << _host.model << " " << str << std::endl;
+    }
+    else
+    {
+        std::cout << "Error: " << _IPstring << " " << _host.model << " " << str << std::endl;
+    }
 }
-
-
 
 SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COMMANDS> &currentDoCommands)
     : _io_context(io_context), _host(host), _currentDoCommands(currentDoCommands), _socket(_io_context), _timer(_io_context)
@@ -294,7 +297,7 @@ void SSHSession::read_label()
             _host.log += ("\n" + _str);
             wlog->writeLog(_str + _IPstring);
 
-             // Добавляю в начало стрима, чтобы отделить то что будет в логе от верхнего аутпута, где будет неожиданное поведение
+            // Добавляю в начало стрима, чтобы отделить то что будет в логе от верхнего аутпута, где будет неожиданное поведение
             _writableCommand = "\n\n\n--------------------------------------------------------\n\tОтправленные команды и полученные ответы:\n\n";
             _ss << _writableCommand;
 
@@ -337,12 +340,15 @@ void SSHSession::one_iteration()
             _host.log += ("\n" + _str);
             wlog->writeLog("Закончен цикл для хоста " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForGoodHosts, _host);
-            if(_host.model == "script"){
-             std::cout <<"Success: " <<"Хост номер("<< _host.number <<") " <<_IPstring << " " << _host.model << " Все команды выполнены."  << std::endl;
-			}else{
-				             std::cout <<"Success: " <<_IPstring << " " << _host.model << " Все команды выполнены."  << std::endl;
-
-			}
+            if (_host.model == "script")
+            {
+                std::cout << "Success: "
+                          << "Хост номер(" << _host.number << ") " << _IPstring << " " << _host.model << " Все команды выполнены." << std::endl;
+            }
+            else
+            {
+                std::cout << "Success: " << _IPstring << " " << _host.model << " Все команды выполнены." << std::endl;
+            }
 
             return; // логика завершения, по идее должен вызвать деструктор прям ща
         }
@@ -351,6 +357,16 @@ void SSHSession::one_iteration()
             // выполняю командe
             _writableCommand = "\n........................................................................................\n\nотправленна команда\t " + _currentDoCommands[_iteration].cmd + " \n\tРезультат:\n";
             _ss << _writableCommand;
+
+            if ((_currentDoCommands[_iteration].send_to_step == ""))
+            {
+                send_to_step = "\x20\n";
+            }
+            else
+            {
+                send_to_step = _currentDoCommands[_iteration].send_to_step  + "\n";
+            }
+
             execute_one_command();
         }
     }
@@ -366,8 +382,8 @@ void SSHSession::execute_one_command() // вообще сделал что-то 
 {
     try
     {
-        std::string command = _currentDoCommands[_iteration].cmd + "\n"; // gpt подсказал так написать ввод
-        libssh2_channel_write(_channel, command.c_str(), command.size());
+        command_exec = _currentDoCommands[_iteration].cmd + "\n"; // gpt подсказал так написать ввод
+        libssh2_channel_write(_channel, command_exec.c_str(), command_exec.size());
         _str = "Отправленна команда " + _currentDoCommands[_iteration].cmd;
         wlog->writeLog(_str + " для " + _IPstring);
 
@@ -419,8 +435,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         // else contunue
         if (_one_again_taked)
         {
-
-            libssh2_channel_write(_channel, "\r\n", 2);
+            libssh2_channel_write(_channel, send_to_step.c_str(), send_to_step.size());
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
 
@@ -529,17 +544,6 @@ void SSHSession::end_one_command()
     try
     {
         _timer.cancel();
-        _cmd_exit_status = libssh2_channel_get_exit_status(_channel);
-        if (!(_cmd_exit_status == _currentDoCommands[_iteration].code))
-        {
-            _str = "Неверный код результата для команды" + _currentDoCommands[_iteration].cmd + ". Ожидалось" + std::to_string(_currentDoCommands[_iteration].code) + ", а в ответе" + std::to_string(_cmd_exit_status);
-            wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в errHosts.log");
-            shortErrlog(_str);
-            _str += "\n\n" + _ss.str() + _part_of_ss.str();
-            _host.log += ("\n" + _str);
-            sqlite->write_one_hostCommit(TableNameForErrorHosts, _host);
-            return;
-        }
 
         // проверить ответ на равенство ожидаемому
         if (_currentDoCommands[_iteration].expect != "")

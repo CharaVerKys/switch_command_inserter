@@ -119,21 +119,21 @@ bool Configer::create_perModel_doCommandsconf()
                             {
                                 "cmd" : "su",
                                 "expect" : "^Password:",
-                                "code" : 0,
+                                "send_to_step" : "",
                                 "not_expect" : "something"
 
                             },
                              {
                                 "cmd" : "myPassword",
                                 "expect" : "",
-                                "code" : 0,
+                                "send_to_step" : "",
                                 "not_expect" : ""
 
                             },
                              {
                                 "cmd" : "systemctl restart apache2",
                                 "expect" : "",
-                                "code" : 0,
+                                "send_to_step" : "",
                                 "not_expect" : ""
 
                             }
@@ -147,14 +147,14 @@ bool Configer::create_perModel_doCommandsconf()
                             {
                                 "cmd" : "conf t",
                                 "expect" : "",
-                                "code" : 0,
+                                "send_to_step" : "",
                                 "not_expect" : ""
 
                             },
                              {
                                 "cmd" : "no logging console",
                                 "expect" : "(вроде не выдаёт ответ, поэтому тут тоже оставить пустое, пустое означает не проверять) ",
-                                "code" : 0,
+                                "send_to_step" : "если здесь пусто в случае не получения _end_of_read из ответа сервера ssh(telnet) будет отправляться пробел (\0x20) ",
                                 "not_expect" : ""
 
                             }
@@ -167,8 +167,8 @@ bool Configer::create_perModel_doCommandsconf()
                             {
                                 "cmd" : " если не экранировать, поведение будет неожидаемое (вылетит на парсинге) ",
                                 "expect" : "ожидание тоже регулярки",
-                                "code" : 0,
-                                "not_expect" : ""
+                                "send_to_step" : "здесь то, что требуется нажать после отправки команды типа show; суть в том что d-link например не всегда реагирует на \x20 или \r ; на некоторые команды нужно отправлять q. в связи с практически нереализуемым абстрактным интерфейсом на такое взаимодействие, и воизбежание создания искуственной задержки через timeout было решено отдать юзеру контроль за выходным значением",
+                                "not_expect" : "тоже регулярка"
 
                             }
             ]
@@ -181,14 +181,14 @@ bool Configer::create_perModel_doCommandsconf()
                             {
                                 "cmd" : "для того чтобы не сбиться, не запутаться при состовлении конфига",
                                 "expect" : "просто соблюдайте этот паттерн и дальше",
-                                "code" : 0,
+                                "send_to_step" : "",
                                 "not_expect" : ""
 
                             },
                              {
                                 "cmd" : "копировать от точки, до закрывающей скобки",
                                 "expect" : "новую модель так же, главное скопировать ту скобку, которая относится именно к этому объекту",
-                                "code" : 0,
+                                "send_to_step" : "",
                                 "not_expect" : ""
 
                             }
@@ -451,8 +451,8 @@ bool Configer::read_perModel_doCommandsconf()
         {
 
             const rapidjson::Value &command = allcommands[j];
-            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("code") || !command.HasMember("not_expect")
-             || !command["cmd"].IsString() || !command["expect"].IsString() || !command["code"].IsInt() || !command["not_expect"].IsString())
+            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("send_to_step") || !command.HasMember("not_expect")
+             || !command["cmd"].IsString() || !command["expect"].IsString() || !command["send_to_step"].IsString() || !command["not_expect"].IsString())
             {
                 std::cerr << "Invalid command format in JSON. \n Проблема с каким то объектом команды в объекте №" << ++i << " команда №" << ++j << std::endl;
                 return false;
@@ -461,7 +461,7 @@ bool Configer::read_perModel_doCommandsconf()
 
             commands.cmd = command["cmd"].GetString();
             commands.expect = command["expect"].GetString();
-            commands.code = command["code"].GetInt();
+            commands.send_to_step = command["send_to_step"].GetString();
             commands.not_expect = command["not_expect"].GetString();
 
             Model_and_Commands_i.second.push_back(commands);

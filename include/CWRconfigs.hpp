@@ -17,15 +17,15 @@ struct COMMANDS
 {
     std::string cmd;
     std::string expect;
-    uint8_t code;
+    std::string send_to_step;
     std::string not_expect;
 
     COMMANDS(){}
     COMMANDS(const std::string &cmd,
              const std::string &expect,
-             const uint8_t &code,
+             const std::string &send_to_step,
              const std::string &not_expect) : //
-                                    code(code),
+                                    send_to_step(send_to_step),
                                     cmd(cmd),
                                     expect(expect),
                                     not_expect(not_expect)

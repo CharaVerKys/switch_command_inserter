@@ -11,12 +11,14 @@ class SSHSession : public std::enable_shared_from_this<SSHSession>
     asio::steady_timer _timer;
     asio::ip::tcp::socket _socket;
     std::string _IPstring;
-    LIBSSH2_SESSION *_session;
-    LIBSSH2_CHANNEL *_channel;
+    LIBSSH2_SESSION *_session = nullptr;
+    LIBSSH2_CHANNEL *_channel = nullptr;
     std::string _writableCommand;
     std::stringstream _ss;
     std::stringstream _part_of_ss;
     std::string _str;
+    std::string command_exec;
+    std::string send_to_step;
     const char *_currentCstrCommand;
     char _buffer[1048576];
     int _cmd_exit_status;
