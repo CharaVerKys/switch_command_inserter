@@ -192,18 +192,24 @@ void commit()
     asio::io_context io_context;
     auto ForCommitHosts = sqlite->read_from_database(TableNameForSSH);
 
-if(!ForCommitHosts.empty()&&ForCommitHosts[0].model == "script"){
-	uint16_t i=0;
-	for(HOST& host : ForCommitHosts){
-		host.number = ++i;
+	if(!ForCommitHosts.empty()&&ForCommitHosts[0].model == "script"){
+		uint16_t i=0;
+		for(HOST& host : ForCommitHosts){
+			host.number = ++i;
+		}
 	}
-}
     
     SSHSession::filterHosts(ForCommitHosts);
     rootCommandsCommit(io_context, ForCommitHosts, configer->getModels_and_commands(), sessions);
     io_context.run();
 	sessions.clear();
+
+	std::cout <<"\n\n---------------------------------\n\n";
+	for (const auto& entry : SSHSession::shortlog) {
+	        std::cout << entry.second << std::endl;
+	    }
     plog->writeLog("Записываются результаты в лог");
+    
     if (sqlite->isTableExist(TableNameForGoodHosts))
     {
         auto goodHosts = sqlite->read_from_databaseCommit(TableNameForGoodHosts);

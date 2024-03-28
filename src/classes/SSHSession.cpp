@@ -3,16 +3,36 @@
 //
 //
 //
+std::string SSHSession::getCurrentTime()
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&in_time_t), "%H:%M:%S");
+    ss << '.' << std::setfill('0') << std::setw(1) << ms.count();
+    return ss.str();
+}
+
+std::map<uint16_t, std::string> SSHSession::shortlog;
+
 void SSHSession::shortErrlog(std::string str)
 {
     if (_host.model == "script")
     {
-        std::cout << "Error: "
-                  << "Хост номер(" << _host.number << ") " << _IPstring << " " << _host.model << " " << str << std::endl;
+
+    	shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring + "\tError: " + str);
+
+
+                std::cout<<  getCurrentTime() << "\t" << _IPstring << "\tХост номер(" << _host.number << ")\tError: " << str<< std::endl;
+
     }
     else
     {
-        std::cout << "Error: " << _IPstring << " " << _host.model << " " << str << std::endl;
+        	shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring +"\t"+ _host.model + "\tError: " + str);
+                std::cout << getCurrentTime() << "\t" << _IPstring << "\t" << _host.model << "\tError: "  << str << std::endl;
+
     }
 }
 
@@ -342,12 +362,14 @@ void SSHSession::one_iteration()
             sqlite->write_one_hostCommit(TableNameForGoodHosts, _host);
             if (_host.model == "script")
             {
-                std::cout << "Success: "
-                          << "Хост номер(" << _host.number << ") " << _IPstring << " " << _host.model << " Все команды выполнены." << std::endl;
+                	shortlog.emplace(_host.number, getCurrentTime() +"\t"+ _IPstring + "\tOK");
+                std::cout<<  getCurrentTime() << "\t" << _IPstring << "\tХост номер(" << _host.number << ")\tOK" << std::endl;
             }
             else
             {
-                std::cout << "Success: " << _IPstring << " " << _host.model << " Все команды выполнены." << std::endl;
+                            	shortlog.emplace(_host.number, getCurrentTime()+ "\t" +  _IPstring + "\t" + _host.model + "\tOK");
+
+                std::cout << getCurrentTime() << "\t" << _IPstring << "\t" << _host.model << "\tOK" << std::endl;
             }
 
             return; // логика завершения, по идее должен вызвать деструктор прям ща
@@ -435,6 +457,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         // else contunue
         if (_one_again_taked)
         {
+        std::cerr << send_to_step << std::endl;
             libssh2_channel_write(_channel, send_to_step.c_str(), send_to_step.size());
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
