@@ -191,10 +191,18 @@ void commit()
     std::vector<std::shared_ptr<SSHSession>> sessions;
     asio::io_context io_context;
     auto ForCommitHosts = sqlite->read_from_database(TableNameForSSH);
+
+if(!ForCommitHosts.empty()&&ForCommitHosts[0].model == "script"){
+	uint16_t i=0;
+	for(HOST& host : ForCommitHosts){
+		host.number = ++i;
+	}
+}
+    
     SSHSession::filterHosts(ForCommitHosts);
     rootCommandsCommit(io_context, ForCommitHosts, configer->getModels_and_commands(), sessions);
     io_context.run();
-
+	sessions.clear();
     plog->writeLog("Записываются результаты в лог");
     if (sqlite->isTableExist(TableNameForGoodHosts))
     {
@@ -252,8 +260,11 @@ void rootCommandsCommit(asio::io_context &io_context,
                             models_and_commands,
                         std::vector<std::shared_ptr<SSHSession>> &sessions)
 {
+
+// std::shared_ptr<SSHSession> duck;
+
     for (auto &host : validForCommitHosts)
-    {
+ 	  { 
         std::regex model_regex;
         std::vector<COMMANDS> currentDoCommands;
         // в каждом отдельном хосте модель будет полная а не регулсярка
@@ -268,10 +279,14 @@ void rootCommandsCommit(asio::io_context &io_context,
         } // этот перебор для каждого отдельного может занять достаточно времени
           // то есть на каждый существующий конфиг я для каждого существующего хоста (в списке валидных) перебираю пока не найдётся, начиная с первого
           // то есть, если первая регулярка .* то все хосты будут выполняться к первой.
-
+		// duck = std::make_shared<SSHSession>(io_context, host, currentDoCommands);
+		// duck->connect();
         // инициализировано для текущего хоста
-        sessions.emplace_back(std::make_shared<SSHSession>(io_context, host, currentDoCommands));
+        // sessions.push_back(std::move(duck));
+sessions.emplace_back(std::make_shared<SSHSession>(io_context, host, currentDoCommands));
         sessions.back()->connect();
-    }
+        
+   }//for each
+
 } // CommandCommiter(io_context,ForCommitHosts,configer->getmodels)
 // первое вне, второе должно быть инициализировано заранее, а третье передаётся по значению

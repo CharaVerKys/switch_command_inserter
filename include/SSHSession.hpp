@@ -23,7 +23,7 @@ class SSHSession : public std::enable_shared_from_this<SSHSession>
     std::regex _expect;
     std::regex _not_expect;
     std::regex _end_of_read = std::regex("\\S+[#$>]\\s?$", std::regex::ECMAScript);
-    std::regex _moreRegex = std::regex("(More)|(Next\\sEntry)", std::regex::ECMAScript);
+    std::regex _moreRegex = std::regex("(--More--)|(Next\\sEntry)", std::regex::ECMAScript);
     size_t _iteration;
     bool _is_end_of_readq;
     bool _one_again_taked;

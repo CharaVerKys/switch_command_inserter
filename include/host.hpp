@@ -16,6 +16,7 @@ struct PORT
     };
 
     uint32_t address;
+    uint16_t number; // используется сейчас только для script
     PORT ssh ={22,false};
     PORT telnet ={23,false};
     LOGIN login;

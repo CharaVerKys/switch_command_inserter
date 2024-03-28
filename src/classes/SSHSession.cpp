@@ -4,8 +4,15 @@
 //
 //
 void SSHSession::shortErrlog(std::string str){
-    std::cout <<"Error: " <<_IPstring << " " << _host.model << " "<< str << std::endl;
+ if(_host.model == "script"){
+             std::cout <<"Error: " <<"Хост номер("<< _host.number <<") " <<_IPstring << " " << _host.model << " "<< str << std::endl;
+			}else{
+				             std::cout <<"Error: " <<_IPstring << " " << _host.model << " "<< str << std::endl;
+			}
 }
+
+
+
 SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COMMANDS> &currentDoCommands)
     : _io_context(io_context), _host(host), _currentDoCommands(currentDoCommands), _socket(_io_context), _timer(_io_context)
 {
@@ -330,7 +337,13 @@ void SSHSession::one_iteration()
             _host.log += ("\n" + _str);
             wlog->writeLog("Закончен цикл для хоста " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForGoodHosts, _host);
-             std::cout <<"Success: " <<_IPstring << " " << _host.model << " Закончен цикл для хоста"  << std::endl;
+            if(_host.model == "script"){
+             std::cout <<"Success: " <<"Хост номер("<< _host.number <<") " <<_IPstring << " " << _host.model << " Все команды выполнены."  << std::endl;
+			}else{
+				             std::cout <<"Success: " <<_IPstring << " " << _host.model << " Все команды выполнены."  << std::endl;
+
+			}
+
             return; // логика завершения, по идее должен вызвать деструктор прям ща
         }
         else
@@ -407,7 +420,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         if (_one_again_taked)
         {
 
-            libssh2_channel_write(_channel, " \n", 2);
+            libssh2_channel_write(_channel, "\r\n", 2);
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
 
