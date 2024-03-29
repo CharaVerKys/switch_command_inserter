@@ -58,6 +58,7 @@ void Logging::writeLog(const std::string &message)
 std::unique_ptr<Logging> plog;
 std::unique_ptr<Logging> wlog;
 std::unique_ptr<Logging> errHlog;
+std::unique_ptr<Logging> idelog;
 
 GoodHostsLogging::GoodHostsLogging(const std::string &filePath,
                                    const std::string &overridableFilePath,

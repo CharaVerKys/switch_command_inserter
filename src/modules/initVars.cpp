@@ -25,7 +25,10 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
     }
 
     // инициализация логера
+    std::filesystem::remove(executable_path / "identify.log");
     std::filesystem::remove(executable_path / "errHosts.log");
+    
+    idelog = std::make_unique<Logging>((executable_path / "identify.log").string(), true);
     plog = std::make_unique<Logging>((logs_directory / "programm.log").string(), true);
     wlog = std::make_unique<Logging>((logs_directory / "working.log").string(), true);
 

@@ -5,7 +5,6 @@
 #include <CWRconfigs.hpp>
 #include <nameDefinition.hpp>
 #include <identifyRegex.hpp>
-
 #include <SSHSession.hpp>
 #include <database.hpp>
 #include <headerlibSwitchCase.hpp>
@@ -15,6 +14,7 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
 
 // rootCallFunctions.cpp
 void rootScan(int argc, char const *argv[]);
+void rootIdentify(int argc, char const *argv[]);
 void rootCommit(int argc, char const *argv[]);
 void rootScript(int argc, char const *argv[]);
 

@@ -1,7 +1,8 @@
 #pragma once
-#include <main.hpp>
 #include <SQLiteCpp/SQLiteCpp.h>
-
+#include <host.hpp>
+#include <logging.hpp>
+#include <asio/ip/address_v4.hpp>
 
 
 class dbLite{

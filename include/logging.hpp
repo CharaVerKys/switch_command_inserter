@@ -34,6 +34,8 @@ public:
 extern std::unique_ptr<Logging> plog;
 extern std::unique_ptr<Logging> wlog;
 extern std::unique_ptr<Logging> errHlog;
+extern std::unique_ptr<Logging> idelog;
+
 
 class GoodHostsLogging : public Logging
 {

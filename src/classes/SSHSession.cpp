@@ -42,7 +42,7 @@ SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COM
     this->_iteration = 0;
     _IPstring = asio::ip::address_v4(_host.address).to_string();
     wlog->writeLog("Инициализирован коммит для " + _IPstring);
-    _timer.expires_after(std::chrono::minutes(15));
+    _timer.expires_after(std::chrono::minutes(2));
 }
 
 //
@@ -87,7 +87,7 @@ void SSHSession::connect()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на connect" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -134,7 +134,7 @@ void SSHSession::handshake()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на handshake" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -190,7 +190,7 @@ void SSHSession::authenticate()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на authent" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -239,7 +239,7 @@ void SSHSession::init_channel()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на channel" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -255,6 +255,27 @@ void SSHSession::init_shell()
             _str = "Успешное создание оболочки к хосту ";
             _host.log += ("\n" + _str);
             wlog->writeLog(_str + _IPstring);
+
+                                             // таймер чтобы не блокировать всё приложение если не приходит ответ (время настраивать в конструкторе)
+        auto self = shared_from_this();
+        _timer.async_wait([this, self](const asio::error_code &er)
+                          {
+                                    if (!er) {
+                                        // если таймер сработал, дроп подключения
+
+                                        _ss << "-----------------------------------------------------------\n"<<
+                                        "\tОшибка: слишком долго нет ответа(таймаут)\n"
+                                        <<"-----------------------------------------------------------\n";
+                                        plog->writeLog("Ошибка: слишком долго нет ответа(таймаут) к хосту "+ _IPstring);
+                                        // будет op aborted на текущем калбеке
+                                        if (_socket.is_open()) {
+                                            _socket.close();
+                                        }
+                                    }else{
+                                        if (er != asio::error::operation_aborted) {
+                                        plog->writeLog("ошибка таймера чтения в SSHSession: "+er.message()+" для хоста " + _IPstring);
+                                    }} });
+                                    
             read_label();
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN)
@@ -287,7 +308,7 @@ void SSHSession::init_shell()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на shell" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -310,7 +331,7 @@ void SSHSession::read_label()
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
             shortErrlog(_str);
         }
-        else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
+       else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
         {
             _part_of_ss.str(""); //  отчищается перед началом цикла
             _str = "Успешное считывание лейбла к хосту ";
@@ -321,6 +342,7 @@ void SSHSession::read_label()
             _writableCommand = "\n\n\n--------------------------------------------------------\n\tОтправленные команды и полученные ответы:\n\n";
             _ss << _writableCommand;
 
+ _timer.cancel();
             one_iteration();
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены
@@ -345,7 +367,7 @@ void SSHSession::read_label()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на label" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -356,6 +378,7 @@ void SSHSession::one_iteration()
     {
         if (!(_iteration < _currentDoCommands.size())) // если команд 0 то не выполнит ничего
         {
+
             _str = ("Закончен цикл для хоста " + _ss.str());
             _host.log += ("\n" + _str);
             wlog->writeLog("Закончен цикл для хоста " + _IPstring);
@@ -376,13 +399,16 @@ void SSHSession::one_iteration()
         }
         else
         {
+
             // выполняю командe
             _writableCommand = "\n........................................................................................\n\nотправленна команда\t " + _currentDoCommands[_iteration].cmd + " \n\tРезультат:\n";
             _ss << _writableCommand;
 
             if ((_currentDoCommands[_iteration].send_to_step == ""))
             {
+
                 send_to_step = "\x20\n";
+
             }
             else
             {
@@ -395,7 +421,7 @@ void SSHSession::one_iteration()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на iteration" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -436,7 +462,7 @@ void SSHSession::execute_one_command() // вообще сделал что-то 
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на exec" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -457,7 +483,6 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         // else contunue
         if (_one_again_taked)
         {
-        std::cerr << send_to_step << std::endl;
             libssh2_channel_write(_channel, send_to_step.c_str(), send_to_step.size());
         } // отправляется только если было прочитано до этого (или при старте)
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
@@ -501,7 +526,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на check" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -557,7 +582,7 @@ void SSHSession::read_one_command()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на read" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }
@@ -616,7 +641,7 @@ void SSHSession::end_one_command()
     catch (const std::exception &e)
     {
         std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на end" + _host.log;
-        std::cout << str << std::endl;
+        std::cerr << str << std::endl;
         plog->writeLog(str);
     }
 }

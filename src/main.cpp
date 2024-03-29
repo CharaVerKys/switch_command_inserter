@@ -33,7 +33,7 @@ int main(const int argc, char const *argv[])
 
         CASE("identify") : //
 
-
+rootIdentify(argc, argv);
  // asio::io_context io;
 // 
     // asio::ip::tcp::resolver resolver(io);

@@ -31,6 +31,15 @@ Configer::Configer(const std::filesystem::path &executable_path) : executable_pa
         }
         plog->writeLog("Созданн пример scriptIp.list");
     }
+    if (!std::filesystem::exists(executable_path / "configs" / "perCommands_findModel.conf"))
+        {
+            if (!create_perCommands_findModelconf())
+            {
+                std::cerr << "Failed to create perCommands_findModel.conf.\n";
+                exit(EACCES);
+            }
+            plog->writeLog("Созданн пример perCommands_findModel.conf");
+        }
 
     if (!read_scriptIpList())
     {
@@ -53,6 +62,14 @@ Configer::Configer(const std::filesystem::path &executable_path) : executable_pa
         exit(ENOENT);
     }
     plog->writeLog("Считан конфиг perModel_doCommands.conf");
+
+    if (!read_perCommands_findModelconf())
+        {
+            std::cerr << "Failed to read perCommands_findModel.conf.\n";
+            exit(ENOENT);
+        }
+    plog->writeLog("Считан конфиг perCommands_findModel.conf");
+
 }
 
 // функции обработчики для конструктора
@@ -154,7 +171,7 @@ bool Configer::create_perModel_doCommandsconf()
                              {
                                 "cmd" : "no logging console",
                                 "expect" : "(вроде не выдаёт ответ, поэтому тут тоже оставить пустое, пустое означает не проверять) ",
-                                "send_to_step" : "если здесь пусто в случае не получения _end_of_read из ответа сервера ssh(telnet) будет отправляться пробел (\0x20) ",
+                                "send_to_step" : "если здесь пусто в случае не получения _end_of_read из ответа сервера ssh(telnet) будет отправляться пробел (\\0x20) ",
                                 "not_expect" : ""
 
                             }
@@ -167,7 +184,7 @@ bool Configer::create_perModel_doCommandsconf()
                             {
                                 "cmd" : " если не экранировать, поведение будет неожидаемое (вылетит на парсинге) ",
                                 "expect" : "ожидание тоже регулярки",
-                                "send_to_step" : "здесь то, что требуется нажать после отправки команды типа show; суть в том что d-link например не всегда реагирует на \x20 или \r ; на некоторые команды нужно отправлять q. в связи с практически нереализуемым абстрактным интерфейсом на такое взаимодействие, и воизбежание создания искуственной задержки через timeout было решено отдать юзеру контроль за выходным значением",
+                                "send_to_step" : "здесь то, что требуется нажать после отправки команды типа show; суть в том что d-link например не всегда реагирует на \\x20 или \\r ; на некоторые команды нужно отправлять q. в связи с практически нереализуемым абстрактным интерфейсом на такое взаимодействие, и воизбежание создания искуственной задержки через timeout было решено отдать юзеру контроль за выходным значением",
                                 "not_expect" : "тоже регулярка"
 
                             }
@@ -251,6 +268,82 @@ bool Configer::create_scriptIpList()
     if (_scriptIpList.is_open())
     {
         std::cerr << "Файл scriptIp.list всё ещё открыт, хотя не должен. \n Крайне вероятно возникновение дополнительных ошибок!!" << std::endl;
+    }
+
+    return true;
+}
+
+bool Configer::create_perCommands_findModelconf(){
+  _perCommands_findModelconf.open(executable_path / "configs" / "perCommands_findModel.conf", std::ios::out);
+    const char *example = R"(
+{"root_Ide":[
+        {
+        "model_to_future_commands" : "nameofmymodel",
+          "commandsForThisModel" : [
+                            {
+                                "cmd" : "term le 0",
+                                "expect" : "",
+                                "send_to_step" : "",
+                                "not_expect" : ""
+
+                            },
+                             {
+                                "cmd" : "show run",
+                                "expect" : "version number and other(.|\\n)*FastEth.*0/48",
+                                "send_to_step" : "",
+                                "not_expect" : "a thing"
+
+                            },
+                             {
+                                "cmd" : "show run int vlan 100",
+                                "expect" : "ip address 10\\.10\\.100\\.",
+                                "send_to_step" : "",
+                                "not_expect" : ""
+
+                            }
+            ]
+        },
+
+   
+        {
+        "model_to_future_commands" : "имя модели, полное. по нему будет смотреть регулярка",
+           "commandsForThisModel" : [
+                            {
+                                "cmd" : "если в первой команде не срабатывает ожидание",
+                                "expect" : "(это ожидание) - то переходит к следующему списку, не прерывая работу",
+                                "send_to_step" : "",
+                                "not_expect" : "(или это ожидание) "
+
+                            },
+                             {
+                                "cmd" : "если закончился список моделей и команд к ним то пишется что модель не определена на этом айпи",
+                                "expect" : "",
+                                "send_to_step" : "если здесь пусто в случае не получения _end_of_read из ответа сервера ssh(telnet) будет отправляться пробел (\\0x20) ",
+                                "not_expect" : "пустые значения такие же как в commit варианте"
+
+                            }
+            ]
+        }
+   
+]}
+
+    )";
+
+    if (!_perCommands_findModelconf.is_open())
+    {
+        std::cerr << "Файл perCommands_findModel.conf не открыт. \n Странная ошибка учитывая контекст." << std::endl;
+        return false;
+    }
+    _perCommands_findModelconf << example;
+    if (!_perCommands_findModelconf)
+    {
+        std::cerr << "Ошибка при записи в файл perCommands_findModel.conf.\n Понятия не имею что вообще может пойти не так, не буду даже обрабатывать ошибку" << std::endl;
+        return false;
+    }
+    _perCommands_findModelconf.close();
+    if (_perCommands_findModelconf.is_open())
+    {
+        std::cerr << "Файл perCommands_findModel.conf всё ещё открыт, хотя не должен. \n Крайне вероятно возникновение дополнительных ошибок!!" << std::endl;
     }
 
     return true;
@@ -477,6 +570,90 @@ bool Configer::read_perModel_doCommandsconf()
     return true;
 }
 
+bool Configer::read_perCommands_findModelconf()
+{
+    plog->writeLog("Считывается конфиг perCommands_findModel.conf");
+    // открываю сам файл
+    _perCommands_findModelconf.open(executable_path / "configs" / "perCommands_findModel.conf", std::ios::in);
+    if (!_perCommands_findModelconf.is_open())
+    {
+        std::cerr << "Failed to open config file perCommands_findModel.conf." << std::endl;
+        return false;
+    }
+    // получаю строку джейсон
+    std::string jsonStr;
+    std::string line;
+    while (std::getline(_perCommands_findModelconf, line))
+    {
+        jsonStr += line;
+    }
+    _perCommands_findModelconf.close();
+    // пропарсинг строки для дальнейшего извлечения данных
+    rapidjson::Document doc;
+    doc.Parse(jsonStr.c_str());
+
+    if (doc.HasParseError())
+    {
+        std::cerr << "Error parsing JSON." << std::endl;
+        return false;
+    }
+
+    // начинаю получать сами данные
+
+    // doc["root_MC"] = корень, то есть через это я обращаюсь к...
+    // _models_and_commands
+    const rapidjson::Value &root = doc["root_Ide"];
+
+    if (!root.IsArray())
+    {
+        std::cerr << "Invalid input format: models should be an array.\n Не знаю даже когда может возникнуть, генерируемый конфиг это точно описывает" << std::endl;
+        return false;
+    }
+
+    for (rapidjson::SizeType i = 0; i < root.Size(); ++i)
+    {
+        const rapidjson::Value &elementByRoot_i = root[i];
+        if (!elementByRoot_i.HasMember("model_to_future_commands") || !elementByRoot_i.HasMember("commandsForThisModel") || !elementByRoot_i["model_to_future_commands"].IsString() || !elementByRoot_i["commandsForThisModel"].IsArray())
+        {
+            std::cerr << "Invalid model format in JSON. \n Что-то не так с регуляркой в элементе №" << ++i << std::endl;
+            return false;
+        }
+
+        std::pair<std::string, std::vector<COMMANDS>> finding_commands_i;
+
+        finding_commands_i.first = elementByRoot_i["model_to_future_commands"].GetString();
+
+        const rapidjson::Value &allcommands = elementByRoot_i["commandsForThisModel"];
+        for (rapidjson::SizeType j = 0; j < allcommands.Size(); ++j)
+        {
+
+            const rapidjson::Value &command = allcommands[j];
+            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("send_to_step") || !command.HasMember("not_expect")
+             || !command["cmd"].IsString() || !command["expect"].IsString() || !command["send_to_step"].IsString() || !command["not_expect"].IsString())
+            {
+                std::cerr << "Invalid command format in JSON. \n Проблема с каким то объектом команды в объекте №" << ++i << " команда №" << ++j << std::endl;
+                return false;
+            }
+            COMMANDS commands;
+
+            commands.cmd = command["cmd"].GetString();
+            commands.expect = command["expect"].GetString();
+            commands.send_to_step = command["send_to_step"].GetString();
+            commands.not_expect = command["not_expect"].GetString();
+
+            finding_commands_i.second.push_back(commands);
+        }
+
+        _finding_commands.push_back(finding_commands_i);
+    }
+
+    if (_perCommands_findModelconf.is_open())
+    {
+        std::cerr << "Файл perCommands_findModel.conf всё ещё открыт, хотя не должен." << std::endl;
+    }
+    return true;
+
+}
 //  функции ниже
 //  просто возвращают значения константными,
 //  ничего больше не делают
@@ -502,6 +679,17 @@ Configer::getModels_and_commands() const
     return _models_and_commands;
 }
 
+const std::vector<            // вектор для отправки в обработчик
+    std::pair<                // пара модель и команды к ней
+        std::string,          // модель
+        std::vector<COMMANDS> // набор команд
+        >                     //                 жесть ваще вектор
+    > &
+Configer::getFinding_commands() const
+{
+    return _finding_commands;
+}
+
 const std::vector<std::string> &Configer::getScriptIpList(){
    return _sIpList;
 }
@@ -510,6 +698,8 @@ const std::vector<std::string> &Configer::getIgnoringHosts()
 {
     return _ignoreHosts;
 }
+
+
 
 // а ври эти вот делают
 

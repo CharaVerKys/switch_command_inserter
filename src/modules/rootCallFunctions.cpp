@@ -8,6 +8,7 @@ void rootCommandsCommit(asio::io_context &io_context,
                         std::vector<std::pair<std::string, std::vector<COMMANDS>>> models_and_commands,
                         std::vector<std::shared_ptr<SSHSession>> &sessions);
 ActiveHOSTS rootDoCommandsScan();
+void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts);
 
 void rootScript(int argc, char const *argv[])
 {
@@ -92,7 +93,7 @@ void rootScan(int argc, char const *argv[])
     if (argc > 2 && std::string(argv[2]) == "identify")
     {
         plog->writeLog("Запущена идентификация как scan + identify");
-        // выполнить функцию идентификации
+        rootDoCommandsIdentify(S_activeHosts);
         plog->writeLog("Программа завершила работу");
         exit(0); // более понятно чем return 0;
     }
@@ -109,7 +110,7 @@ void rootScan(int argc, char const *argv[])
     if (S_answer == "Yes")
     {
         plog->writeLog("Запущена идентификация из scan");
-        // выполнить функцию идентификации
+        rootDoCommandsIdentify(S_activeHosts);
         plog->writeLog("Программа завершила работу");
         exit(0);
     }
@@ -136,6 +137,63 @@ ActiveHOSTS rootDoCommandsScan()
     ActiveHOSTS activeHosts = ScanNetwork(hosts);        // отдаю массив хостов, получаю 2 массива: ссш и онли телнет
     plog->writeLog("1/3 завершено: получены списки хостов с открытыми портами");
     return std::move(activeHosts);
+}
+
+//
+
+void rootIdentify(int argc, char const *argv[])
+{
+
+    plog->writeLog("Запущено с глаголом identify");
+    ActiveHOSTS I_activeHosts;
+    I_activeHosts.ssh = sqlite->read_from_database(TableNameForSSH);
+    rootDoCommandsIdentify(I_activeHosts);
+    plog->writeLog("Программа завершила работу");
+    exit(0);
+}
+
+void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
+{
+    std::cout << "Запущена идентификация моделей\n";
+
+    std::vector<std::shared_ptr<IdentifySSH>> sessions;
+    asio::io_context io_context;
+
+    auto finding_commands = configer->getFinding_commands();
+    auto logins = configer->getLogins_Passwords();
+    ActiveHOSTS identifinedHosts;
+
+    for (auto &host : I_activeHosts.ssh)
+    {
+        sessions.emplace_back(std::make_shared<IdentifySSH>(io_context, host,logins, finding_commands, identifinedHosts.ssh));
+        sessions.back()->connect();
+    } // for each
+
+    io_context.run();
+    sessions.clear();
+
+    if (sqlite->isTableExist(TableNameForSSH)) // удаляю непосредственно перед использованием
+    {
+        sqlite->emptyOut(TableNameForSSH);
+    }
+    sqlite->write_to_database(TableNameForSSH, identifinedHosts.ssh);
+
+    plog->writeLog("Записываются результаты в лог");
+
+     if (sqlite->isTableExist(TableNameForIdentify))
+    {
+        idelog->writeLog("Обращаю внимание что лог отдельного хоста может быть довольно большой, рекомендую загрепать файл по ключевому слову kayword для получения краткого списка где удачно а где нет");
+        auto identifyLogable = sqlite->read_from_databaseCommit(TableNameForIdentify);
+        IdentifySSH::filter_to_log_resulting_vector_from_database(identifyLogable);
+        for (HOST &host : identifyLogable)
+        {
+            idelog->writeLog("\n----------------------------------------------------------------------------\n" 
+            + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" 
+            + host.login.name + "\t\t\tkeyword\n\t\tМодель: " 
+            + host.model + "\t\t\tkeyword\n_______________\nЛог:\n" + host.log);
+        }
+    }
+
 }
 
 //
@@ -192,24 +250,27 @@ void commit()
     asio::io_context io_context;
     auto ForCommitHosts = sqlite->read_from_database(TableNameForSSH);
 
-	if(!ForCommitHosts.empty()&&ForCommitHosts[0].model == "script"){
-		uint16_t i=0;
-		for(HOST& host : ForCommitHosts){
-			host.number = ++i;
-		}
-	}
-    
+    if (!ForCommitHosts.empty() && ForCommitHosts[0].model == "script")
+    {
+        uint16_t i = 0;
+        for (HOST &host : ForCommitHosts)
+        {
+            host.number = ++i;
+        }
+    }
+
     SSHSession::filterHosts(ForCommitHosts);
     rootCommandsCommit(io_context, ForCommitHosts, configer->getModels_and_commands(), sessions);
     io_context.run();
-	sessions.clear();
+    sessions.clear();
 
-	std::cout <<"\n\n---------------------------------\n\n";
-	for (const auto& entry : SSHSession::shortlog) {
-	        std::cout << entry.second << std::endl;
-	    }
+    std::cout << "\n\n---------------------------------\n\n";
+    for (const auto &entry : SSHSession::shortlog)
+    {
+        std::cout << entry.second << std::endl;
+    }
     plog->writeLog("Записываются результаты в лог");
-    
+
     if (sqlite->isTableExist(TableNameForGoodHosts))
     {
         auto goodHosts = sqlite->read_from_databaseCommit(TableNameForGoodHosts);
@@ -267,10 +328,14 @@ void rootCommandsCommit(asio::io_context &io_context,
                         std::vector<std::shared_ptr<SSHSession>> &sessions)
 {
 
-// std::shared_ptr<SSHSession> duck;
+    // std::shared_ptr<SSHSession> duck;
+    // duck = std::make_shared<SSHSession>(io_context, host, currentDoCommands);
+    // duck->connect();
+
+    wlog->writeLog("\n\n\t\tНачался commit.\n");
 
     for (auto &host : validForCommitHosts)
- 	  { 
+    {
         std::regex model_regex;
         std::vector<COMMANDS> currentDoCommands;
         // в каждом отдельном хосте модель будет полная а не регулсярка
@@ -285,14 +350,13 @@ void rootCommandsCommit(asio::io_context &io_context,
         } // этот перебор для каждого отдельного может занять достаточно времени
           // то есть на каждый существующий конфиг я для каждого существующего хоста (в списке валидных) перебираю пока не найдётся, начиная с первого
           // то есть, если первая регулярка .* то все хосты будут выполняться к первой.
-		// duck = std::make_shared<SSHSession>(io_context, host, currentDoCommands);
-		// duck->connect();
+
         // инициализировано для текущего хоста
         // sessions.push_back(std::move(duck));
-sessions.emplace_back(std::make_shared<SSHSession>(io_context, host, currentDoCommands));
+        sessions.emplace_back(std::make_shared<SSHSession>(io_context, host, currentDoCommands));
         sessions.back()->connect();
-        
-   }//for each
+
+    } // for each
 
 } // CommandCommiter(io_context,ForCommitHosts,configer->getmodels)
 // первое вне, второе должно быть инициализировано заранее, а третье передаётся по значению

@@ -4,6 +4,7 @@
 #define TableNameForGoodHosts "goodHosts"
 #define TableNameForProgErrorHosts "progErrorHosts"
 #define TableNameForErrorHosts "errorHosts"
+#define TableNameForIdentify "identify"
 
 struct COMMANDS
 {
