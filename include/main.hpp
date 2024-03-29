@@ -3,10 +3,8 @@
 #include <host.hpp>
 #include <asio.hpp>
 #include <CWRconfigs.hpp>
-#define TableNameForSSH "activeHostsSSH"
-#define TableNameForGoodHosts "goodHosts"
-#define TableNameForProgErrorHosts "progErrorHosts"
-#define TableNameForErrorHosts "errorHosts"
+#include <nameDefinition.hpp>
+#include <identifyRegex.hpp>
 
 #include <SSHSession.hpp>
 #include <database.hpp>
@@ -21,17 +19,6 @@ void rootCommit(int argc, char const *argv[]);
 void rootScript(int argc, char const *argv[]);
 
 // scanNetwork.cpp
-struct SNparsedNetworkHost
-{
-    uint32_t network;
-    uint32_t hosts;
-};
-struct ActiveHOSTS
-{
-    std::vector<HOST> ssh;
-    std::vector<HOST> onlyTelnet;
-};
-
 ActiveHOSTS ScanNetwork(std::vector<HOST> &hosts);
 
 std::vector<HOST> SNinitHostsVector(SNparsedNetworkHost &IpPool);

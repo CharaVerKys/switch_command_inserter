@@ -32,7 +32,7 @@ void rootScript(int argc, char const *argv[])
         host.model = "script";
         hosts.push_back(host);
     }
-    plog->writeLog("Инициализирован вектор хостов");
+    plog->writeLog("Инициализирован вектор хостов (script)");
 
     if (sqlite->isTableExist(TableNameForSSH)) // удаляю непосредственно перед использованием
     {

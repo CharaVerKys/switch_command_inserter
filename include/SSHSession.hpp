@@ -6,7 +6,7 @@ class SSHSession : public std::enable_shared_from_this<SSHSession>
 {
     asio::io_context &_io_context;
     HOST &_host;
-    std::vector<COMMANDS> _currentDoCommands;
+    std::vector<COMMANDS>& _currentDoCommands;
 
     asio::steady_timer _timer;
     asio::ip::tcp::socket _socket;
@@ -21,7 +21,6 @@ class SSHSession : public std::enable_shared_from_this<SSHSession>
     std::string send_to_step;
     const char *_currentCstrCommand;
     char _buffer[1048576];
-    int _cmd_exit_status;
     std::regex _expect;
     std::regex _not_expect;
     std::regex _end_of_read = std::regex("\\S+[#$>]\\s?$", std::regex::ECMAScript);

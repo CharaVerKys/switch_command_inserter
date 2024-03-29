@@ -13,25 +13,7 @@
 #include <regex>
 #include <host.hpp>
 #include <asio.hpp>
-struct COMMANDS
-{
-    std::string cmd;
-    std::string expect;
-    std::string send_to_step;
-    std::string not_expect;
-
-    COMMANDS(){}
-    COMMANDS(const std::string &cmd,
-             const std::string &expect,
-             const std::string &send_to_step,
-             const std::string &not_expect) : //
-                                    send_to_step(send_to_step),
-                                    cmd(cmd),
-                                    expect(expect),
-                                    not_expect(not_expect)
-    {
-    }
-};
+#include <nameDefinition.hpp>
 
 class Configer
 {
