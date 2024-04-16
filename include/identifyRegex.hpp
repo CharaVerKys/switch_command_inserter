@@ -38,6 +38,8 @@ class IdentifySSH : public std::enable_shared_from_this<IdentifySSH>
     std::regex _end_of_read = std::regex("\\S+[#$>]\\s?$", std::regex::ECMAScript);
     std::regex _moreRegex = std::regex("(--More--)|(Next\\sEntry)|(Quit.*Next\\sPage.*Previous\\sPage)", std::regex::ECMAScript);
     size_t _login_iteration;
+    size_t _cover_iteration;
+    size_t _command_iteration;
     bool _is_end_of_readq;
     bool _one_again_taked;
 
@@ -53,13 +55,13 @@ public:
 private:
     void handshake();
     void authenticate();
-    // void init_channel();
-    // void init_shell();
-    // void read_label();
-    // 
-    // void one_iteration();
-    // void execute_one_command();
-    // void check_end_of_read(uint16_t buffer_point_add);
-    // void read_one_command();
-    // void end_one_command();
+     void init_channel();
+     void init_shell();
+     void read_label();
+     void one_iteration_cover_vector();
+    void one_iteration_inside();
+     void execute_one_command();
+     void check_end_of_read(uint16_t buffer_point_add);
+     void read_one_command();
+     void end_one_command();
 };

@@ -333,6 +333,8 @@ void SSHSession::read_label()
         }
        else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
         {
+            _timer.cancel();
+            
             _part_of_ss.str(""); //  отчищается перед началом цикла
             _str = "Успешное считывание лейбла к хосту ";
             _host.log += ("\n" + _str);
@@ -342,7 +344,6 @@ void SSHSession::read_label()
             _writableCommand = "\n\n\n--------------------------------------------------------\n\tОтправленные команды и полученные ответы:\n\n";
             _ss << _writableCommand;
 
- _timer.cancel();
             one_iteration();
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены

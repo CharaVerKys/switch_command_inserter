@@ -1,6 +1,13 @@
 #pragma once
-#include <main.hpp>
+#include <asio.hpp>
 #include <libssh2.h>
+#include <host.hpp>
+#include <nameDefinition.hpp>
+#include <regex>
+#include <map>
+#include <iostream>
+#include <logging.hpp>
+#include <database.hpp>
 
 class SSHSession : public std::enable_shared_from_this<SSHSession>
 {
