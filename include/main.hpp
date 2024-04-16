@@ -8,6 +8,7 @@
 #include <SSHSession.hpp>
 #include <database.hpp>
 #include <headerlibSwitchCase.hpp>
+#include <TELNETSession.hpp>
 // #include <logging.hpp> // уже добавил в CWRconfigs.hpp, чисто на всякий случай закоментил
 // initVars.cpp
 void initVars(std::filesystem::path executable_path, const int &argc, char const *argv[]);
@@ -17,6 +18,8 @@ void rootScan(int argc, char const *argv[]);
 void rootIdentify(int argc, char const *argv[]);
 void rootCommit(int argc, char const *argv[]);
 void rootScript(int argc, char const *argv[]);
+void rootScriptTELNET(int argc, char const *argv[]);
+
 
 // scanNetwork.cpp
 ActiveHOSTS ScanNetwork(std::vector<HOST> &hosts);

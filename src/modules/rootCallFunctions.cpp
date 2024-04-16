@@ -83,6 +83,79 @@ void rootScript(int argc, char const *argv[])
     }
 }
 
+void rootScriptTELNET(int argc, char const *argv[])
+{
+
+    plog->writeLog("Запущено с глаголом script");
+
+    std::string login;
+    std::string password;
+    std::cout << "Введите логин: ";
+    std::getline(std::cin, login);
+    std::cout << "Введите пароль: ";
+    std::getline(std::cin, password);
+
+    std::vector<HOST> hosts;
+    auto ipList = configer->getScriptIpList();
+    for (auto &ip : ipList)
+    {
+        HOST host;
+        host.address = ipToBin(ip);
+        host.login.name = login;
+        host.login.password = password;
+        host.model = "script";
+        hosts.push_back(host);
+    }
+    plog->writeLog("Инициализирован вектор хостов (scriptTelnet)");
+
+    if (sqlite->isTableExist(TableNameForTELNET)) // удаляю непосредственно перед использованием
+    {
+        sqlite->emptyOut(TableNameForTELNET);
+    }
+    sqlite->write_to_database(TableNameForTELNET, hosts);
+
+    plog->writeLog("Данные записаны");
+
+    if (!(argc > 2 && std::string(argv[2]) == "-y"))
+    {
+        std::cout << "Данные записаны, продолжить (commit)?  (Yes/no)" << std::endl;
+        std::string S_answer;
+        std::getline(std::cin, S_answer);
+
+        while (S_answer == "yes" || S_answer == "YES")
+        {
+            std::cout << "Пожалуйста ответьте в нужном регистре ( Yes )\n";
+            std::getline(std::cin, S_answer);
+        }
+
+        if (S_answer == "Yes")
+        {
+            plog->writeLog("Запущен commit из script");
+            areYouAgreeq();
+            commit();
+            plog->writeLog("Программа завершила работу");
+            exit(0);
+        }
+        else
+        {
+            std::cout << "Отменено пользоваталем" << std::endl;
+            plog->writeLog("Отменено пользоваталем");
+            plog->writeLog("Программа завершила работу");
+            exit(0); // более понятно чем return 0;
+        }
+    }
+    //
+    else
+    // если параметр -y
+    {
+        plog->writeLog("Запущено с -y");
+        commit();
+
+        plog->writeLog("Программа завершила работу");
+        exit(0);
+    }
+}
+
 void rootScan(int argc, char const *argv[])
 {
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
@@ -165,7 +238,7 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
 
     for (auto &host : I_activeHosts.ssh)
     {
-        sessions.emplace_back(std::make_shared<IdentifySSH>(io_context, host,logins, finding_commands, identifinedHosts.ssh));
+        sessions.emplace_back(std::make_shared<IdentifySSH>(io_context, host, logins, finding_commands, identifinedHosts.ssh));
         sessions.back()->connect();
     } // for each
 
@@ -180,25 +253,22 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
 
     plog->writeLog("Записываются результаты в лог");
 
-     if (sqlite->isTableExist(TableNameForIdentify))
+    if (sqlite->isTableExist(TableNameForIdentify))
     {
         idelog->writeLog("Обращаю внимание что лог отдельного хоста может быть довольно большой, рекомендую загрепать файл по ключевому слову kayword для получения краткого списка где удачно а где нет");
         auto identifyLogable = sqlite->read_from_databaseCommit(TableNameForIdentify);
         IdentifySSH::filter_to_log_resulting_vector_from_database(identifyLogable);
         for (HOST &host : identifyLogable)
         {
-            idelog->writeLog("\n----------------------------------------------------------------------------\n" 
-            + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" 
-            + host.login.name + "\t\t\tkeyword\n\t\tМодель: " 
-            + host.model + "\t\t\tkeyword\n_______________\nЛог:\n" + host.log);
+            idelog->writeLog("\n----------------------------------------------------------------------------\n" + asio::ip::address_v4(host.address).to_string() + "\t\tЛогин:" + host.login.name + "\t\t\tkeyword\n\t\tМодель: " + host.model + "\t\t\tkeyword\n_______________\nЛог:\n" + host.log);
         }
     }
-
 }
 
 //
 //                                                  commit
 //
+
 void rootCommit(int argc, char const *argv[])
 {
     plog->writeLog("Запущено с глаголом commit");
@@ -245,27 +315,46 @@ void areYouAgreeq() // если согласие то просто пропус�
 void commit()
 {
     plog->writeLog("Запущен коммит");
-    emptyOutTables(); // обнуляю таблицы перед записью в них
     std::vector<std::shared_ptr<SSHSession>> sessions;
+    std::vector<std::shared_ptr<TELNETSession>> sessionsT;
     asio::io_context io_context;
-    auto ForCommitHosts = sqlite->read_from_database(TableNameForSSH);
+    ActiveHOSTS activeHOSTS;
+    activeHOSTS.ssh = sqlite->read_from_database(TableNameForSSH);
+    activeHOSTS.onlyTelnet = sqlite->read_from_database(TableNameForTELNET);
 
-    if (!ForCommitHosts.empty() && ForCommitHosts[0].model == "script")
+    uint16_t i = 0;
+    if (!activeHOSTS.ssh.empty() && activeHOSTS.ssh[0].model == "script")
     {
-        uint16_t i = 0;
-        for (HOST &host : ForCommitHosts)
+        for (HOST &host : activeHOSTS.ssh)
+        {
+            host.number = ++i;
+        }
+    }
+    if (!activeHOSTS.onlyTelnet.empty() && activeHOSTS.onlyTelnet[0].model == "script")
+    {
+        for (HOST &host : activeHOSTS.onlyTelnet)
         {
             host.number = ++i;
         }
     }
 
-    SSHSession::filterHosts(ForCommitHosts);
-    rootCommandsCommit(io_context, ForCommitHosts, configer->getModels_and_commands(), sessions);
+    SSHSession::filterHosts(activeHOSTS.ssh);
+    TELNETSession::filterHosts(activeHOSTS.onlyTelnet);
+    wlog->writeLog("\n\n\t\tНачался commit.\n");
+    rootCommandsCommit(io_context, activeHOSTS.ssh, configer->getModels_and_commands(), sessions);
+    rootCommandsCommit(io_context, activeHOSTS.onlyTelnet, configer->getModels_and_commands(), sessionsT);
+    emptyOutTables(); // обнуляю таблицы перед записью в них
     io_context.run();
     sessions.clear();
+    sessionsT.clear();
+
 
     std::cout << "\n\n---------------------------------\n\n";
     for (const auto &entry : SSHSession::shortlog)
+    {
+        std::cout << entry.second << std::endl;
+    }
+    for (const auto &entry : TELNETSession::shortlog)
     {
         std::cout << entry.second << std::endl;
     }
@@ -316,6 +405,7 @@ void emptyOutTables()
     }
 }
 
+template<typename T>
 void rootCommandsCommit(asio::io_context &io_context,
                         std::vector<HOST> &validForCommitHosts,
                         std::vector<                  // вектор для отправки в обработчик
@@ -325,14 +415,12 @@ void rootCommandsCommit(asio::io_context &io_context,
                                 >                     //                 жесть ваще вектор
                             >
                             models_and_commands,
-                        std::vector<std::shared_ptr<SSHSession>> &sessions)
+                        std::vector<std::shared_ptr<T>> &sessions)
 {
 
-    // std::shared_ptr<SSHSession> duck;
-    // duck = std::make_shared<SSHSession>(io_context, host, currentDoCommands);
+    // std::shared_ptr<T> duck;
+    // duck = std::make_shared<T>(io_context, host, currentDoCommands);
     // duck->connect();
-
-    wlog->writeLog("\n\n\t\tНачался commit.\n");
 
     for (auto &host : validForCommitHosts)
     {
@@ -353,7 +441,7 @@ void rootCommandsCommit(asio::io_context &io_context,
 
         // инициализировано для текущего хоста
         // sessions.push_back(std::move(duck));
-        sessions.emplace_back(std::make_shared<SSHSession>(io_context, host, currentDoCommands));
+        sessions.emplace_back(std::make_shared<T>(io_context, host, currentDoCommands));
         sessions.back()->connect();
 
     } // for each

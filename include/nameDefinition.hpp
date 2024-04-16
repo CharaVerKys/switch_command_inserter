@@ -5,6 +5,9 @@
 #define TableNameForProgErrorHosts "progErrorHosts"
 #define TableNameForErrorHosts "errorHosts"
 #define TableNameForIdentify "identify"
+#define TableNameForTELNET "activeHostsTELNET"
+
+
 
 struct COMMANDS
 {

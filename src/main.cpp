@@ -34,31 +34,6 @@ int main(const int argc, char const *argv[])
         CASE("identify") : //
 
 rootIdentify(argc, argv);
- // asio::io_context io;
-// 
-    // asio::ip::tcp::resolver resolver(io);
-// 
-    // auto endpoints = resolver.resolve("127.0.0.1", "telnet");
-// 
-    // asio::ip::tcp::socket socket(io);
-// 
-    // asio::connect(socket, endpoints);
-// 
-  // 
-// 
-    // asio::write(socket, asio::buffer(username));
-    // asio::write(socket, asio::buffer(password));
-// 
-    // std::array<char, 128> buffer;
-    // size_t bytes_received = socket.read_some(asio::buffer(buffer));
-// 
-    // std::cout << "Server response: " << std::string(buffer.data(), bytes_received) << std::endl;
-// 
-    // socket.close();
-
-
-
-
 
                            break; // конец identify
 
@@ -72,6 +47,10 @@ rootIdentify(argc, argv);
 		CASE("script") : //
                          rootScript(argc, argv);
       	break;            // конец script
+
+        CASE("scripTELN") : //
+                         rootScriptTELNET(argc, argv);
+      	break;            // конец scripTELN
 
 
     default: // выдать ошибку о несоотвествии глагола
