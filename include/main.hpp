@@ -9,6 +9,7 @@
 #include <database.hpp>
 #include <headerlibSwitchCase.hpp>
 #include <TELNETSession.hpp>
+#include <identifyRegexT.hpp>
 // #include <logging.hpp> // уже добавил в CWRconfigs.hpp, чисто на всякий случай закоментил
 // initVars.cpp
 void initVars(std::filesystem::path executable_path, const int &argc, char const *argv[]);

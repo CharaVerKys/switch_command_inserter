@@ -139,7 +139,6 @@ void TELNETSession::send_password()
     try
     {
         _timer.cancel();
-        _last_read.str("");
 
         auto self = shared_from_this();
         asio::async_write(_socket, asio::buffer(_host.login.password), [this, self](const asio::error_code &error, size_t bytes_transferred)
@@ -171,6 +170,8 @@ void TELNETSession::one_iteration()
     try
     {
         _timer.cancel();
+        _last_read.str("");
+
         if (!(_iteration < _currentDoCommands.size())) // если команд 0 то не выполнит ничего
         {
 
@@ -215,7 +216,6 @@ void TELNETSession::exec_com()
 
     try
     {
-        _timer.cancel();
 
         auto self = shared_from_this();
         asio::async_write(_socket, asio::buffer(_currentDoCommands[_iteration].cmd), [this, self](const asio::error_code &error, size_t bytes_transferred)
@@ -289,7 +289,6 @@ void TELNETSession::end_of_com()
         }
 
         _ss << _last_read.str();
-        _last_read.str("");
 
         ++_iteration;
 

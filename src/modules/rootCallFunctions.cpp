@@ -220,6 +220,7 @@ void rootIdentify(int argc, char const *argv[])
     plog->writeLog("Запущено с глаголом identify");
     ActiveHOSTS I_activeHosts;
     I_activeHosts.ssh = sqlite->read_from_database(TableNameForSSH);
+    I_activeHosts.onlyTelnet = sqlite->read_from_database(TableNameForTELNET);
     rootDoCommandsIdentify(I_activeHosts);
     plog->writeLog("Программа завершила работу");
     exit(0);
@@ -230,6 +231,8 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
     std::cout << "Запущена идентификация моделей\n";
 
     std::vector<std::shared_ptr<IdentifySSH>> sessions;
+    std::vector<std::shared_ptr<IdentifyTELNET>> sessionsT;
+
     asio::io_context io_context;
 
     auto finding_commands = configer->getFinding_commands();
@@ -242,14 +245,31 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
         sessions.back()->connect();
     } // for each
 
+
+    for (auto &host : I_activeHosts.onlyTelnet)
+    {
+        sessionsT.emplace_back(std::make_shared<IdentifyTELNET>(io_context, host, logins, finding_commands, identifinedHosts.onlyTelnet));
+        sessionsT.back()->connect();
+    } // for each
+
     io_context.run();
     sessions.clear();
+    sessionsT.clear();
+
 
     if (sqlite->isTableExist(TableNameForSSH)) // удаляю непосредственно перед использованием
     {
         sqlite->emptyOut(TableNameForSSH);
     }
     sqlite->write_to_database(TableNameForSSH, identifinedHosts.ssh);
+
+
+    if (sqlite->isTableExist(TableNameForTELNET)) // удаляю непосредственно перед использованием
+    {
+        sqlite->emptyOut(TableNameForTELNET);
+    }
+    sqlite->write_to_database(TableNameForTELNET, identifinedHosts.onlyTelnet);
+
 
     plog->writeLog("Записываются результаты в лог");
 
