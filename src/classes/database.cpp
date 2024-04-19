@@ -4,7 +4,6 @@ dbLite::dbLite(const std::filesystem::path &executable_path)
 {
     try
     {
-
         db = std::make_unique<SQLite::Database>(executable_path / "sqlite.db", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
         plog->writeLog("Открыта/создана БД");
     }
@@ -184,20 +183,5 @@ std::vector<HOST> dbLite::read_from_databaseCommit(const std::string &TableName)
     return std::move(hosts);
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 std::unique_ptr<dbLite> sqlite;

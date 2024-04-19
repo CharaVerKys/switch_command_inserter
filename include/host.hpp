@@ -10,14 +10,14 @@ struct HOST
         std::string password;
     };
 struct PORT
-    {
+    {// вполне можно назвать ошибкой в проектировании - избыточная часть
         uint16_t number;
         bool establish;
     };
 
     uint32_t address;
     uint16_t number; // используется сейчас только для script
-    PORT ssh ={22,false};
+    PORT ssh ={22,false}; 
     PORT telnet ={23,false};
     LOGIN login;
     std::string model;

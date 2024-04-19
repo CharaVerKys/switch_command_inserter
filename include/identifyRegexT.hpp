@@ -8,6 +8,9 @@
 #include <database.hpp>
 #include <functional>
 
+// не заходите сюда лучше даже
+// тут в целом всё как в ssh но бля этот телнет...
+
 class IdentifyTELNET : public std::enable_shared_from_this<IdentifyTELNET>
 {
     asio::io_context &_io_context;

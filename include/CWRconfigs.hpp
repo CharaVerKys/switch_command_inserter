@@ -14,6 +14,16 @@
 #include <host.hpp>
 #include <asio.hpp>
 #include <nameDefinition.hpp>
+/*
+    Этот класс читает и создаёт конфиг файлы
+
+    некоторый функционал вынесен в initVars.cpp
+
+    имена вполне понятные, я надеюсь, просто прочитать можно и понять за что отвечают
+
+
+
+*/
 
 class Configer
 {
@@ -32,12 +42,12 @@ class Configer
     std::fstream _networkconf;
     std::fstream _perModel_doCommandsconf;
     std::fstream _perCommands_findModelconf;
-    std::filesystem::path executable_path;
+    std::filesystem::path executable_path; //путь к папке исполняемого файла
 
-    std::vector<std::string> _sIpList;
-    std::vector<std::string> _ignoreHosts;
+    std::vector<std::string> _sIpList; //готовый список айпи в скрипт
+    std::vector<std::string> _ignoreHosts; //готовый список текущих игнорируемых хостов
     std::vector<std::pair<std::string, std::string>> _Logins_Passwords;
-    std::string _IpMask;
+    std::string _IpMask; //айпи и маска из конфиг файла
 
     std::vector<                  // вектор для отправки в обработчик
         std::pair<                // пара модель и команды к ней

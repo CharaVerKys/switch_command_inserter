@@ -13,6 +13,8 @@
 class IdentifySSH : public std::enable_shared_from_this<IdentifySSH>
 {
 
+// обозначения примерно теже что в ССШсессии
+
     asio::io_context &_io_context;
     HOST &_host;
     std::vector<std::pair<std::string, std::vector<COMMANDS>>> &_finding_commands;

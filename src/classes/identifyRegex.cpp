@@ -6,6 +6,7 @@
 
 void IdentifySSH::filter_to_log_resulting_vector_from_database(std::vector<HOST> &hosts)
 {
+    // сортировочка поехала
 
     auto hasLoginNoModel = [](const HOST &host)
     {
@@ -24,6 +25,7 @@ void IdentifySSH::filter_to_log_resulting_vector_from_database(std::vector<HOST>
     std::vector<HOST> hostsWithNoModelNoLogin;
     std::vector<HOST> hostsWithModelAndLogin;
 
+    // 3 массива потом склеиваю
     for (const auto &host : hosts)
     {
         if (hasLoginNoModel(host))
@@ -44,6 +46,8 @@ void IdentifySSH::filter_to_log_resulting_vector_from_database(std::vector<HOST>
         }
     }
     hosts.clear();
+
+    // это можно, и впринципе стоило бы переделать на move_iterator но я забил
     hosts.insert(hosts.end(), hostsWithLoginNoModel.begin(), hostsWithLoginNoModel.end());
     hosts.insert(hosts.end(), hostsWithNoModelNoLogin.begin(), hostsWithNoModelNoLogin.end());
     hosts.insert(hosts.end(), hostsWithModelAndLogin.begin(), hostsWithModelAndLogin.end());
@@ -60,7 +64,7 @@ IdentifySSH::IdentifySSH(asio::io_context &io_context, HOST &host,
       _host(host),
       _finding_commands(finding_commands),
       _logins(logins),
-      _identifined_hosts__vector_of_ref(identifined_hosts__vector_of_ref),
+      _identifined_hosts__vector_of_ref(identifined_hosts__vector_of_ref), // результаты
       _socket(_io_context),
       _timer(_io_context)
 {
@@ -167,12 +171,14 @@ void IdentifySSH::authenticate()
 {
     try
     {
+        // если закончились логины
         if (_logins.size() == _login_iteration)
         {
             _str = "Не удалось подобрать логин/пароль к хосту ";
             _host.log += ("\n" + _str);
             plog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForIdentify, _host);
+            return;
         }
 
         auto self = shared_from_this();
@@ -401,28 +407,17 @@ void IdentifySSH::read_label()
     }
 }
 
-
-/*
-мне нужно обойти двумерный массив полностью
-условие выхода законченный вложенный массив
-
-
-1. обход всего - выход с завершением хоста при неудачи
-2. обход вложенного запись при удачи модели, дальше обработает весь массив
-*/
-
-
 void IdentifySSH::one_iteration_cover_vector()
 {
     try
     {
-        if (!(_cover_iteration < _finding_commands.size())) // если команд 0 то не выполнит ничего
+        if (!(_cover_iteration < _finding_commands.size())) // если набор пустой то выход
         {
             _str = ("Закончен поиск для хоста " + _ss.str());
             _host.log += ("\n" + _str);
             wlog->writeLog("Закончен поиск для хоста " + _IPstring);
             sqlite->write_one_hostCommit(TableNameForIdentify, _host);
-            
+
             return; // логика завершения, по идее должен вызвать деструктор прям ща
         }
         else
@@ -442,25 +437,24 @@ void IdentifySSH::one_iteration_cover_vector()
     }
 }
 
-
 void IdentifySSH::one_iteration_inside()
 {
     try
     {
+        // неожиданный ответ вызываю функцию одной итерации ковера
+
         if (!(_command_iteration < _finding_commands.at(_cover_iteration).second.size())) // если команд 0 то не выполнит ничего
         {
-            //если команд не осталось - нашёл
-            // неожиданный ответ вызываю функцию одной итерации ковера
+            // если команд не осталось - нашёл
             _host.model = _finding_commands.at(_cover_iteration).first; // ковер соответственно...
-            return; // логика завершения, по идее должен вызвать деструктор прям ща
+            return;                                                     // логика завершения, по идее должен вызвать деструктор прям ща
         }
         else
         {
             _writableCommand = "\n........................................................................................\n\nотправленна команда\t " + _finding_commands.at(_cover_iteration).second.at(_command_iteration).cmd + " \n\tРезультат:\n";
             _ss << _writableCommand;
 
-
-            if(_finding_commands.at(_cover_iteration).second.at(_command_iteration).send_to_step=="")
+            if (_finding_commands.at(_cover_iteration).second.at(_command_iteration).send_to_step == "")
             {
                 send_to_step = "\x20\n";
             }
@@ -468,7 +462,7 @@ void IdentifySSH::one_iteration_inside()
             {
                 send_to_step = _finding_commands.at(_cover_iteration).second.at(_command_iteration).send_to_step + "\n";
             }
-            
+
             // сейчас я во внутреннем цикле
             execute_one_command();
         }
@@ -480,8 +474,6 @@ void IdentifySSH::one_iteration_inside()
         plog->writeLog(str);
     }
 }
-
-
 
 void IdentifySSH::execute_one_command() // вообще сделал что-то типо pipeline но хз правильно ли, зато понятно, не так востребовано как с предыдущими но да и ладно
 {
@@ -523,8 +515,6 @@ void IdentifySSH::execute_one_command() // вообще сделал что-то
         plog->writeLog(str);
     }
 }
-
-
 
 void IdentifySSH::check_end_of_read(uint16_t buffer_point_add) // не логирую
 {

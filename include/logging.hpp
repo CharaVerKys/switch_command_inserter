@@ -7,27 +7,24 @@
 #include <sstream>
 #include <filesystem>
 
-#define isWRITEq if(!isWriteThisLog){return;}
+#define isWRITEq if(!isWriteThisLog){return;} // управляющая функция
+
+// часть функционала вынесена в initVars.cpp
 
 class Logging
 {
 protected:
     std::string logFilePath;
     std::ofstream logFile;
-    bool isWriteThisLog;
+    bool isWriteThisLog; // управляющая переменная
 
-
-
-    // Функция для получения текущего времени в нужном формате
+    //для получения текущего времени в нужном формате
     std::string getCurrentTime();
 
 public:
-    // Измененный конструктор
     Logging(const std::string &filePath,bool isWriteThisLog);
-    // Деструктор
     ~Logging();
 
-    // Метод для записи строки в файл
     virtual void writeLog(const std::string &message);
 };
 
@@ -36,7 +33,7 @@ extern std::unique_ptr<Logging> wlog;
 extern std::unique_ptr<Logging> errHlog;
 extern std::unique_ptr<Logging> idelog;
 
-
+// этот класс в 2 места записывает лог
 class GoodHostsLogging : public Logging
 {
     std::ofstream overridableLogFile;

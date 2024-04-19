@@ -7,6 +7,9 @@
 #include <logging.hpp>
 #include <database.hpp>
 
+// не заходите сюда лучше даже
+// тут в целом всё как в ssh но бля этот телнет...
+
 class TELNETSession : public std::enable_shared_from_this<TELNETSession>
 {
 

@@ -13,6 +13,7 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
             std::cerr << "Failed to create directory logs.\n";
         }
     }
+    // и поддирикторию для запуска
     std::string pathHereLogFormat = "log(" + getCurrentDateTimeForLogDir() + ")";
     std::filesystem::path logs_directory = executable_path / "logs" / pathHereLogFormat;
 
@@ -24,9 +25,11 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
         }
     }
 
-    // инициализация логера
+// удаляю из корня те что не должны повторяться по логике
     std::filesystem::remove(executable_path / "identify.log");
     std::filesystem::remove(executable_path / "errHosts.log");
+    
+    // инициализация логера
     
     idelog = std::make_unique<Logging>((executable_path / "identify.log").string(), true);
     plog = std::make_unique<Logging>((logs_directory / "programm.log").string(), true);
@@ -39,7 +42,7 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
         isWriteThisLog = true;
     }
     errHlog = std::make_unique<Logging>((executable_path / "errHosts.log").string(), isWriteThisLog);
-    gHlog = std::make_unique<GoodHostsLogging>((logs_directory / "goodHosts.log").string(),                   // я вообще мог бы это спокойно вставить внутрь, но не стану уже переделывать
+    gHlog = std::make_unique<GoodHostsLogging>((logs_directory / "goodHosts.log").string(),                   // я вообще мог бы это спокойно вставить внутрь блока if, но не стану уже переделывать
                                                (executable_path / "goodHosts.log").string(), isWriteThisLog); // просто идея как это должно работать поменялась
 
     // сразу же, как возможно, начинаю лог

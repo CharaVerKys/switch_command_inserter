@@ -1,22 +1,4 @@
 #include <main.hpp>
-// мусорная функция, не используется
-bool is_port_open(const uint32_t ip_address, int port)
-{
-    using asio::ip::tcp;
-    static asio::io_context io_context;
-    asio::ip::tcp::endpoint endpoint(asio::ip::address_v4(ip_address), port);
-    tcp::socket socket(io_context);
-    try
-    {
-        socket.connect(endpoint);
-        return true;
-    }
-    catch (std::exception &e)
-    {
-        return false;
-    }
-}
-
 
 
 std::vector<HOST> SNinitHostsVector(SNparsedNetworkHost &IpPool)

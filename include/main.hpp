@@ -1,15 +1,16 @@
 #pragma once
 #include <iostream>
-#include <host.hpp>
 #include <asio.hpp>
-#include <CWRconfigs.hpp>
-#include <nameDefinition.hpp>
-#include <identifyRegex.hpp>
-#include <SSHSession.hpp>
-#include <database.hpp>
-#include <headerlibSwitchCase.hpp>
-#include <TELNETSession.hpp>
+
+#include <host.hpp> // структура хоста
+#include <CWRconfigs.hpp> //чтение и запись конфига (create/write/read)
+#include <nameDefinition.hpp> // имена и некоторые структуры
+#include <identifyRegex.hpp> // обработчики поиска
 #include <identifyRegexT.hpp>
+#include <SSHSession.hpp> // обработчики сессий
+#include <TELNETSession.hpp>
+#include <database.hpp> // работа с sqlite
+#include <headerlibSwitchCase.hpp> // даёт возможность писать символы в SwitchCase
 // #include <logging.hpp> // уже добавил в CWRconfigs.hpp, чисто на всякий случай закоментил
 
 
@@ -26,13 +27,10 @@ void rootScriptTELNET(int argc, char const *argv[]);
 
 // scanNetwork.cpp
 ActiveHOSTS ScanNetwork(std::vector<HOST> &hosts);
-
 std::vector<HOST> SNinitHostsVector(SNparsedNetworkHost &IpPool);
 void SNcheck_port_async(HOST &host, asio::io_context &io_context, HOST::PORT &port, std::vector<HOST> &validHosts);
 void SNcheck_port_async(HOST &host, asio::io_context &io_context, HOST::PORT &port, std::vector<HOST> &validHosts, std::vector<HOST> &refusedHosts);
 
-// мусорная функция, не используется
-bool is_port_open(const uint32_t ip_address, int port);
 
 // parseIpMaskToIpPool.cpp
 SNparsedNetworkHost parseIpMaskToIpPool(std::string ipAndMask);

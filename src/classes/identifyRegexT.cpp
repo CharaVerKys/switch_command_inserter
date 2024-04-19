@@ -101,6 +101,7 @@ void IdentifyTELNET::one_it_authent_try()
             _host.log += ("\n" + _str);
             plog->writeLog(_str + _IPstring);
             sqlite->write_one_hostCommit(TableNameForIdentify, _host);
+            return;
         }
 
         auto self = shared_from_this();
@@ -242,7 +243,7 @@ void IdentifyTELNET::one_iteration_inside()
 {
     try
     {
-           _last_read.str("");
+        _last_read.str("");
         if (!(_command_iteration < _finding_commands.at(_cover_iteration).second.size())) // если команд 0 то не выполнит ничего
         {
             // если команд не осталось - нашёл
@@ -436,7 +437,6 @@ void IdentifyTELNET::read_from_host(const std::regex &regex, std::function<void(
     }
 }
 
-
 void IdentifyTELNET::check_end_of_read(const std::regex &regex) // не логирую
 {
     try
@@ -514,10 +514,9 @@ void IdentifyTELNET::check_end_of_read(const std::regex &regex) // не логи
     }
 }
 
-
-
-void IdentifyTELNET::read_from_host_init(){
-_is_end_of_readq = false;
+void IdentifyTELNET::read_from_host_init()
+{
+    _is_end_of_readq = false;
     _is_this_moreq = false;
     send_to_step = "\x20\n";
 }
@@ -526,5 +525,14 @@ void IdentifyTELNET::read_from_host_init(const char *what_send_to_step)
 {
     _is_end_of_readq = false;
     _is_this_moreq = false;
-    send_to_step = what_send_to_step;
+    if ((what_send_to_step == ""))
+    { // определяю какой отправлять
+
+        send_to_step = "\x20\n";
+    }
+    else
+    {
+        send_to_step = what_send_to_step;
+        send_to_step += "\n";
+    }
 }

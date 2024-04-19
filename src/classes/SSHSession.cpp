@@ -15,24 +15,19 @@ std::string SSHSession::getCurrentTime()
     return ss.str();
 }
 
-std::map<uint16_t, std::string> SSHSession::shortlog;
+std::map<uint16_t, std::string> SSHSession::shortlog; // статическая переменная
 
 void SSHSession::shortErrlog(std::string str)
-{
+{ // лог удачного выхода не делал отдельную функцию, описано прямо в коде (итерация)
     if (_host.model == "script")
     {
-
-    	shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring + "\tError: " + str);
-
-
-                std::cout<<  getCurrentTime() << "\t" << _IPstring << "\tХост номер(" << _host.number << ")\tError: " << str<< std::endl;
-
+        shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring + "\tError: " + str);
+        std::cout << getCurrentTime() << "\t" << _IPstring << "\tХост номер(" << _host.number << ")\tError: " << str << std::endl;
     }
     else
     {
-        	shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring +"\t"+ _host.model + "\tError: " + str);
-                std::cout << getCurrentTime() << "\t" << _IPstring << "\t" << _host.model << "\tError: "  << str << std::endl;
-
+        shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring + "\t" + _host.model + "\tError: " + str);
+        std::cout << getCurrentTime() << "\t" << _IPstring << "\t" << _host.model << "\tError: " << str << std::endl;
     }
 }
 
@@ -42,10 +37,10 @@ SSHSession::SSHSession(asio::io_context &io_context, HOST &host, std::vector<COM
     this->_iteration = 0;
     _IPstring = asio::ip::address_v4(_host.address).to_string();
     wlog->writeLog("Инициализирован коммит для " + _IPstring);
-    _timer.expires_after(std::chrono::minutes(2));
+    _timer.expires_after(std::chrono::minutes(2)); // тут настраивается длительность таймера
 }
 
-//
+// код хорошо самодокументируется
 
 void SSHSession::connect()
 {
@@ -256,10 +251,10 @@ void SSHSession::init_shell()
             _host.log += ("\n" + _str);
             wlog->writeLog(_str + _IPstring);
 
-                                             // таймер чтобы не блокировать всё приложение если не приходит ответ (время настраивать в конструкторе)
-        auto self = shared_from_this();
-        _timer.async_wait([this, self](const asio::error_code &er)
-                          {
+            // таймер чтобы не блокировать всё приложение если не приходит ответ (время настраивать в конструкторе)
+            auto self = shared_from_this();
+            _timer.async_wait([this, self](const asio::error_code &er)
+                              {
                                     if (!er) {
                                         // если таймер сработал, дроп подключения
 
@@ -275,7 +270,7 @@ void SSHSession::init_shell()
                                         if (er != asio::error::operation_aborted) {
                                         plog->writeLog("ошибка таймера чтения в SSHSession: "+er.message()+" для хоста " + _IPstring);
                                     }} });
-                                    
+
             read_label();
         }
         else if (rc == LIBSSH2_ERROR_EAGAIN)
@@ -314,7 +309,7 @@ void SSHSession::init_shell()
 }
 
 void SSHSession::read_label()
-{
+{ // это фигня типо я такой-то сервер/коммутатор
     try
     {
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
@@ -331,10 +326,10 @@ void SSHSession::read_label()
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
             shortErrlog(_str);
         }
-       else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета
+        else if (std::regex_search(_part_of_ss.str(), _end_of_read)) // главное чтобы проверка была до открытия сокета 
         {
             _timer.cancel();
-            
+
             _part_of_ss.str(""); //  отчищается перед началом цикла
             _str = "Успешное считывание лейбла к хосту ";
             _host.log += ("\n" + _str);
@@ -386,12 +381,12 @@ void SSHSession::one_iteration()
             sqlite->write_one_hostCommit(TableNameForGoodHosts, _host);
             if (_host.model == "script")
             {
-                	shortlog.emplace(_host.number, getCurrentTime() +"\t"+ _IPstring + "\tOK");
-                std::cout<<  getCurrentTime() << "\t" << _IPstring << "\tХост номер(" << _host.number << ")\tOK" << std::endl;
+                shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring + "\tOK");
+                std::cout << getCurrentTime() << "\t" << _IPstring << "\tХост номер(" << _host.number << ")\tOK" << std::endl;
             }
             else
             {
-                            	shortlog.emplace(_host.number, getCurrentTime()+ "\t" +  _IPstring + "\t" + _host.model + "\tOK");
+                shortlog.emplace(_host.number, getCurrentTime() + "\t" + _IPstring + "\t" + _host.model + "\tOK");
 
                 std::cout << getCurrentTime() << "\t" << _IPstring << "\t" << _host.model << "\tOK" << std::endl;
             }
@@ -401,19 +396,18 @@ void SSHSession::one_iteration()
         else
         {
 
-            // выполняю командe
+            // выполняю команды
             _writableCommand = "\n........................................................................................\n\nотправленна команда\t " + _currentDoCommands[_iteration].cmd + " \n\tРезультат:\n";
             _ss << _writableCommand;
 
             if ((_currentDoCommands[_iteration].send_to_step == ""))
-            {
+            {// определяю какой отправлять
 
                 send_to_step = "\x20\n";
-
             }
             else
             {
-                send_to_step = _currentDoCommands[_iteration].send_to_step  + "\n";
+                send_to_step = _currentDoCommands[_iteration].send_to_step + "\n";
             }
 
             execute_one_command();
@@ -427,8 +421,8 @@ void SSHSession::one_iteration()
     }
 }
 
-void SSHSession::execute_one_command() // вообще сделал что-то типо pipeline но хз правильно ли, зато понятно, не так востребовано как с предыдущими но да и ладно
-{
+void SSHSession::execute_one_command() 
+{// вообще сделал что-то типо pipeline но хз правильно ли, зато понятно, не так востребовано как с предыдущими но да и ладно
     try
     {
         command_exec = _currentDoCommands[_iteration].cmd + "\n"; // gpt подсказал так написать ввод
@@ -486,6 +480,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         {
             libssh2_channel_write(_channel, send_to_step.c_str(), send_to_step.size());
         } // отправляется только если было прочитано до этого (или при старте)
+
         int rc = libssh2_channel_read(_channel, _buffer, sizeof(_buffer));
 
         if (rc > 0)
@@ -530,7 +525,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
         std::cerr << str << std::endl;
         plog->writeLog(str);
     }
-}
+}// оно выполняется нормально не зависимо откуда вызвалось чтение - из чека или из рида команды
 
 void SSHSession::read_one_command()
 {

@@ -4,9 +4,9 @@
 Logging::Logging(const std::string &filePath, bool isWriteThisLog) : logFilePath(filePath)
 {
     this->isWriteThisLog = isWriteThisLog;
-    isWRITEq
+    isWRITEq // функция просто ничего не делает
 
-        // Попытка удаления существующего файла лога, чтобы писать по новой
+        // удаления существующего файла лога, чтобы писать по новой
         // std::filesystem::remove(logFilePath); // это уже типо легаси, я переопределил логику логирования, теперь не перезаписывается файл а список папок с временем
 
         logFile.open(logFilePath, std::ios::out | std::ios::app);
@@ -27,7 +27,7 @@ Logging::~Logging()
     }
 }
 
-// Функция для получения текущего времени в формате
+// для получения текущего времени в формате
 std::string Logging::getCurrentTime()
 {
     auto now = std::chrono::system_clock::now();
@@ -38,10 +38,10 @@ std::string Logging::getCurrentTime()
     ss << std::put_time(std::localtime(&in_time_t), "%m-%d %H:%M:%S");
     ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
 
+// этот код я чисто стыбзил
     return ss.str();
 }
 
-// Метод для записи строки в файл
 void Logging::writeLog(const std::string &message)
 {
     isWRITEq
@@ -49,16 +49,19 @@ void Logging::writeLog(const std::string &message)
         if (!logFile.is_open())
     {
         std::cerr << "Log file is not open. (" + logFilePath + ")" << std::endl;
-
         return;
     }
     logFile << getCurrentTime() << " -> " << message << std::endl;
 }
 
+// вот такой простинький логер
+
 std::unique_ptr<Logging> plog;
 std::unique_ptr<Logging> wlog;
 std::unique_ptr<Logging> errHlog;
 std::unique_ptr<Logging> idelog;
+
+// а этот уже чуть чуть посложнее
 
 GoodHostsLogging::GoodHostsLogging(const std::string &filePath,
                                    const std::string &overridableFilePath,

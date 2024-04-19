@@ -474,7 +474,16 @@ void TELNETSession::read_from_host_init(const char *what_send_to_step)
 {
     _is_end_of_readq = false;
     _is_this_moreq = false;
-    send_to_step = what_send_to_step;
+    if ((what_send_to_step == ""))
+    { // определяю какой отправлять
+
+        send_to_step = "\x20\n";
+    }
+    else
+    {
+        send_to_step = what_send_to_step;
+        send_to_step += "\n";
+    }
 }
 
 void TELNETSession::filterHosts(std::vector<HOST> &hosts)

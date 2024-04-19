@@ -3,7 +3,7 @@
 Configer::Configer(const std::filesystem::path &executable_path) : executable_path(executable_path)
 {
 
-    // проверить существуют ли файлы, создать если не существуют через функции
+    // проверить существуют ли файлы, создать если не существуют
     if (!std::filesystem::exists(executable_path / "configs" / "network.conf"))
     {
         if (!create_networkconf())
@@ -32,15 +32,16 @@ Configer::Configer(const std::filesystem::path &executable_path) : executable_pa
         plog->writeLog("Созданн пример scriptIp.list");
     }
     if (!std::filesystem::exists(executable_path / "configs" / "perCommands_findModel.conf"))
+    {
+        if (!create_perCommands_findModelconf())
         {
-            if (!create_perCommands_findModelconf())
-            {
-                std::cerr << "Failed to create perCommands_findModel.conf.\n";
-                exit(EACCES);
-            }
-            plog->writeLog("Созданн пример perCommands_findModel.conf");
+            std::cerr << "Failed to create perCommands_findModel.conf.\n";
+            exit(EACCES);
         }
+        plog->writeLog("Созданн пример perCommands_findModel.conf");
+    }
 
+    // и теперь открыть их и считать
     if (!read_scriptIpList())
     {
         std::cerr << "Failed to read scriptIp.list.\n";
@@ -48,7 +49,6 @@ Configer::Configer(const std::filesystem::path &executable_path) : executable_pa
     }
     plog->writeLog("Считан конфиг scriptIp.list");
 
-    // и теперь открыть их и считать
     if (!read_networkconf())
     {
         std::cerr << "Failed to read network.conf.\n";
@@ -64,15 +64,16 @@ Configer::Configer(const std::filesystem::path &executable_path) : executable_pa
     plog->writeLog("Считан конфиг perModel_doCommands.conf");
 
     if (!read_perCommands_findModelconf())
-        {
-            std::cerr << "Failed to read perCommands_findModel.conf.\n";
-            exit(ENOENT);
-        }
+    {
+        std::cerr << "Failed to read perCommands_findModel.conf.\n";
+        exit(ENOENT);
+    }
     plog->writeLog("Считан конфиг perCommands_findModel.conf");
-
 }
 
 // функции обработчики для конструктора
+
+// простые создания шаблона
 
 bool Configer::create_networkconf()
 {
@@ -142,7 +143,7 @@ bool Configer::create_perModel_doCommandsconf()
                             },
                              {
                                 "cmd" : "myPassword",
-                                "expect" : "",
+                                "expect" : "myhost",
                                 "send_to_step" : "",
                                 "not_expect" : ""
 
@@ -171,7 +172,7 @@ bool Configer::create_perModel_doCommandsconf()
                              {
                                 "cmd" : "no logging console",
                                 "expect" : "(вроде не выдаёт ответ, поэтому тут тоже оставить пустое, пустое означает не проверять) ",
-                                "send_to_step" : "если здесь пусто в случае не получения _end_of_read из ответа сервера ssh(telnet) будет отправляться пробел (\\0x20) ",
+                                "send_to_step" : "если здесь пусто в случае получения moreRegex(--More-- и другие) из ответа сервера ssh(telnet) будет отправляться пробел (\\0x20) ",
                                 "not_expect" : ""
 
                             }
@@ -243,11 +244,11 @@ bool Configer::create_scriptIpList()
     const char *example = R"(192.168.8.1;192.168.8.2;
 10.90.90.90;
 10.90.90.100;172.16.0.1;172.16.0.2;192.168.1.1;
-192.168.1.2;
+192.168.1.2
 10.0.0.1;10.0.0.2;
 
 192.168.0.1;192.168.0.2;
-172.31.0.1;
+172.31.0.1
 172.31.0.2;10.1.1.1;
 
 10.1.1.2;192.168.2.1;192.168.2.2;
@@ -273,8 +274,9 @@ bool Configer::create_scriptIpList()
     return true;
 }
 
-bool Configer::create_perCommands_findModelconf(){
-  _perCommands_findModelconf.open(executable_path / "configs" / "perCommands_findModel.conf", std::ios::out);
+bool Configer::create_perCommands_findModelconf()
+{
+    _perCommands_findModelconf.open(executable_path / "configs" / "perCommands_findModel.conf", std::ios::out);
     const char *example = R"(
 {"root_Ide":[
         {
@@ -349,8 +351,11 @@ bool Configer::create_perCommands_findModelconf(){
     return true;
 }
 
+// функции чтения
+// и писать это и читать ужас просто, а что если использовать не джейсон а самописный парсинг? ой ля....
+
 bool Configer::read_scriptIpList()
-{
+{ // тут самописный парсинг
 
     plog->writeLog("Считывается конфиг scriptIp.list");
 
@@ -361,8 +366,11 @@ bool Configer::read_scriptIpList()
         return false;
     }
 
+    // не стал делать отдельную функцию в класс, оставил внутри этой функции
+    // парсинг каждой отдельной строки в файле, разделитель ;
     auto parse = [](std::string line)
     {
+        // решил сделать локальные переменные
         std::vector<std::string> ips;
         std::string ip;
         std::istringstream iss(line);
@@ -374,15 +382,14 @@ bool Configer::read_scriptIpList()
     };
 
     std::string line;
-    while (std::getline(_scriptIpList, line))
+    while (std::getline(_scriptIpList, line)) // получаю каждую строку как из istream
     {
-
         std::vector<std::string> ips = parse(line);
 
         for (const auto &ip : ips)
         {
             if (ip.size() > 0 && ip.find_first_not_of("0123456789.") == std::string::npos)
-            {
+            { // очень простая проверка, защитит от мисклика но не защитит от неправильного айпи
                 _sIpList.push_back(ip);
             }
             else
@@ -391,6 +398,11 @@ bool Configer::read_scriptIpList()
             }
         }
     }
+    if (_scriptIpList.is_open())
+    {
+        std::cerr << "Файл scriptIp.list всё ещё открыт, хотя не должен." << std::endl;
+    }
+
     return true;
 }
 
@@ -439,9 +451,9 @@ bool Configer::read_networkconf()
 
     if (!std::regex_match(_IpMask, ipRegex))
     {
+        std::cerr << "Invalid IP/mask in network.conf." << std::endl;
         return false;
     }
-    plog->writeLog("Адрес соответствует регулярке, но регулярка просто проверяет что знаки - числа.");
 
     // долбанутое разложение массива, и это ещё не массив команд
     if (doc.HasMember("logins") && doc["logins"].IsArray())
@@ -449,7 +461,7 @@ bool Configer::read_networkconf()
         const rapidjson::Value &logins = doc["logins"];
         for (rapidjson::SizeType i = 0; i < logins.Size(); ++i)
         {
-
+            // вот это для читаемости порекомендовал б добавлять пробелы после &&, а в vscode форматирование перекидывает их в одну строку
             if (logins[i].HasMember("login") && logins[i].HasMember("password") && logins[i]["login"].IsString() && logins[i]["password"].IsString())
             {
                 _Logins_Passwords.emplace_back(logins[i]["login"].GetString(), logins[i]["password"].GetString());
@@ -476,6 +488,7 @@ bool Configer::read_networkconf()
     for (rapidjson::SizeType i = 0; i < doc["ignorehosts"].Size(); ++i)
     {
         _ignoreHosts.emplace_back(doc["ignorehosts"][i].GetString());
+        // решил не обрабатывать неправильный формат
     }
 
     if (_networkconf.is_open())
@@ -525,33 +538,37 @@ bool Configer::read_perModel_doCommandsconf()
         std::cerr << "Invalid input format: models should be an array.\n Не знаю даже когда может возникнуть, генерируемый конфиг это точно описывает" << std::endl;
         return false;
     }
-
+    // получаю каждую модель и набор команд к ней
     for (rapidjson::SizeType i = 0; i < root.Size(); ++i)
     {
+        // ссылка заместо элемента массива
         const rapidjson::Value &elementByRoot_i = root[i];
+
+        // проверяю...
         if (!elementByRoot_i.HasMember("model") || !elementByRoot_i.HasMember("commandsForThisModel") || !elementByRoot_i["model"].IsString() || !elementByRoot_i["commandsForThisModel"].IsArray())
         {
-            std::cerr << "Invalid model format in JSON. \n Что-то не так с регуляркой в элементе №" << ++i << std::endl;
+            std::cerr << "Invalid model format in JSON. \n Что-то не так (вероятно с регуляркой) в элементе №" << ++i << std::endl;
             return false;
         }
-
+        // инициализирую внутреннию пару
         std::pair<std::string, std::vector<COMMANDS>> Model_and_Commands_i;
 
+        // получаю модель
         Model_and_Commands_i.first = elementByRoot_i["model"].GetString();
 
         const rapidjson::Value &allcommands = elementByRoot_i["commandsForThisModel"];
+        // получаю набор команд
         for (rapidjson::SizeType j = 0; j < allcommands.Size(); ++j)
         {
 
             const rapidjson::Value &command = allcommands[j];
-            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("send_to_step") || !command.HasMember("not_expect")
-             || !command["cmd"].IsString() || !command["expect"].IsString() || !command["send_to_step"].IsString() || !command["not_expect"].IsString())
+            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("send_to_step") || !command.HasMember("not_expect") || !command["cmd"].IsString() || !command["expect"].IsString() || !command["send_to_step"].IsString() || !command["not_expect"].IsString())
             {
                 std::cerr << "Invalid command format in JSON. \n Проблема с каким то объектом команды в объекте №" << ++i << " команда №" << ++j << std::endl;
                 return false;
             }
+            // аккуратненько присваиваю полученные данные
             COMMANDS commands;
-
             commands.cmd = command["cmd"].GetString();
             commands.expect = command["expect"].GetString();
             commands.send_to_step = command["send_to_step"].GetString();
@@ -559,7 +576,7 @@ bool Configer::read_perModel_doCommandsconf()
 
             Model_and_Commands_i.second.push_back(commands);
         }
-
+        // добавляю в итоговый вектор
         _models_and_commands.push_back(Model_and_Commands_i);
     }
 
@@ -599,9 +616,8 @@ bool Configer::read_perCommands_findModelconf()
     }
 
     // начинаю получать сами данные
+    // здесь всё так же как в предыдущей функции, буквально 1 в 1
 
-    // doc["root_MC"] = корень, то есть через это я обращаюсь к...
-    // _models_and_commands
     const rapidjson::Value &root = doc["root_Ide"];
 
     if (!root.IsArray())
@@ -628,8 +644,7 @@ bool Configer::read_perCommands_findModelconf()
         {
 
             const rapidjson::Value &command = allcommands[j];
-            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("send_to_step") || !command.HasMember("not_expect")
-             || !command["cmd"].IsString() || !command["expect"].IsString() || !command["send_to_step"].IsString() || !command["not_expect"].IsString())
+            if (!command.HasMember("cmd") || !command.HasMember("expect") || !command.HasMember("send_to_step") || !command.HasMember("not_expect") || !command["cmd"].IsString() || !command["expect"].IsString() || !command["send_to_step"].IsString() || !command["not_expect"].IsString())
             {
                 std::cerr << "Invalid command format in JSON. \n Проблема с каким то объектом команды в объекте №" << ++i << " команда №" << ++j << std::endl;
                 return false;
@@ -652,8 +667,8 @@ bool Configer::read_perCommands_findModelconf()
         std::cerr << "Файл perCommands_findModel.conf всё ещё открыт, хотя не должен." << std::endl;
     }
     return true;
-
 }
+
 //  функции ниже
 //  просто возвращают значения константными,
 //  ничего больше не делают
@@ -690,8 +705,9 @@ Configer::getFinding_commands() const
     return _finding_commands;
 }
 
-const std::vector<std::string> &Configer::getScriptIpList(){
-   return _sIpList;
+const std::vector<std::string> &Configer::getScriptIpList()
+{
+    return _sIpList;
 }
 
 const std::vector<std::string> &Configer::getIgnoringHosts()
@@ -699,10 +715,7 @@ const std::vector<std::string> &Configer::getIgnoringHosts()
     return _ignoreHosts;
 }
 
-
-
-// а ври эти вот делают
-
+// для обновления после коммита всех успешных
 bool Configer::updateNetwork_conf(std::vector<HOST> &goodHosts)
 {
 
@@ -714,21 +727,24 @@ bool Configer::updateNetwork_conf(std::vector<HOST> &goodHosts)
         std::cerr << "Failed to open config file network.conf. (for modify)" << std::endl;
         return false;
     }
-    // Создание JSON объекта
+    // устанавливаю сам корневой объект
     rapidjson::Document doc;
     doc.SetObject();
-
+    // создаю первое поле
     rapidjson::Value network(_IpMask.c_str(), doc.GetAllocator());
     doc.AddMember("network", network, doc.GetAllocator());
-
+    // создаю поля логин пароль
     rapidjson::Value logins(rapidjson::kArrayType);
     for (const auto &login_password : _Logins_Passwords)
     {
+        // тут впринципе вполне читаемо что происходит
         rapidjson::Value login_object(rapidjson::kObjectType);
+
         rapidjson::Value login(login_password.first.c_str(), doc.GetAllocator());
         rapidjson::Value password(login_password.second.c_str(), doc.GetAllocator());
         login_object.AddMember("login", login, doc.GetAllocator());
         login_object.AddMember("password", password, doc.GetAllocator());
+
         logins.PushBack(login_object, doc.GetAllocator());
     }
     doc.AddMember("logins", logins, doc.GetAllocator());
@@ -752,12 +768,12 @@ bool Configer::updateNetwork_conf(std::vector<HOST> &goodHosts)
 
     doc.AddMember("ignorehosts", ignorehosts, doc.GetAllocator());
 
-    // Запись JSON объекта в файл
-
+    // запись в файл
     rapidjson::StringBuffer buffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> prettyWriter(buffer);
     doc.Accept(prettyWriter);
 
+// тут что-то вроде обратной зависимости
     _networkconf << buffer.GetString() << std::endl;
     _networkconf.close();
 
