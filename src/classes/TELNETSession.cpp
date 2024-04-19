@@ -464,18 +464,17 @@ void TELNETSession::read_from_host(const std::regex &regex, std::function<void()
     }
 }
 
-void TELNETSession::read_from_host_init(const char *what_send_to_step = "")
+void TELNETSession::read_from_host_init(){
+_is_end_of_readq = false;
+    _is_this_moreq = false;
+    send_to_step = "\x20\n";
+}
+
+void TELNETSession::read_from_host_init(const char *what_send_to_step)
 {
     _is_end_of_readq = false;
     _is_this_moreq = false;
-    if (what_send_to_step[0]=='\0')
-    {
-        send_to_step = "\x20\n";
-    }
-    else
-    {
-        send_to_step = what_send_to_step;
-    }
+    send_to_step = what_send_to_step;
 }
 
 void TELNETSession::filterHosts(std::vector<HOST> &hosts)

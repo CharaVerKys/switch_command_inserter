@@ -10,7 +10,7 @@
 
 class IdentifyTELNET : public std::enable_shared_from_this<IdentifyTELNET>
 {
-     asio::io_context &_io_context;
+    asio::io_context &_io_context;
     HOST &_host;
     std::vector<std::pair<std::string, std::vector<COMMANDS>>> &_finding_commands;
     std::vector<std::pair<std::string, std::string>> &_logins;
@@ -27,7 +27,7 @@ class IdentifyTELNET : public std::enable_shared_from_this<IdentifyTELNET>
     std::string line;
     asio::streambuf _read_buffer;
     std::string _writableCommand;
-   std::regex _expect;
+    std::regex _expect;
     std::regex _not_expect;
     bool _is_end_of_readq;
     bool _is_this_moreq;
@@ -44,21 +44,22 @@ class IdentifyTELNET : public std::enable_shared_from_this<IdentifyTELNET>
 
 public:
     IdentifyTELNET(asio::io_context &io_context, HOST &host,
-                std::vector<std::pair<std::string, std::string>> &logins,
-                std::vector<std::pair<std::string, std::vector<COMMANDS>>> &finding_commands,
-                std::vector<HOST> &identifined_hosts__vector_of_ref);
-                void connect();
+                   std::vector<std::pair<std::string, std::string>> &logins,
+                   std::vector<std::pair<std::string, std::vector<COMMANDS>>> &finding_commands,
+                   std::vector<HOST> &identifined_hosts__vector_of_ref);
+    void connect();
 
 private:
     void start_timer();
     void read_from_host(const std::regex &regex, std::function<void()> next_callback);
     void check_end_of_read(const std::regex &regex);
-    void read_from_host_init(const char* what_send_to_step);
+    void read_from_host_init(const char *what_send_to_step);
+    void one_iteration_inside();
     void one_it_authent_try();
     void send_password();
     void extra_read_logic();
     void one_iteration_cover_vector();
-    void one_iteration_inside();
-void exec_com();
-void end_of_com();
+    void read_from_host_init();
+    void exec_com();
+    void end_of_com();
 };

@@ -48,6 +48,7 @@ private:
     void read_from_host(const std::regex &regex, std::function<void()> next_callback);
     void check_end_of_read(const std::regex &regex);
     void read_from_host_init(const char* what_send_to_step);
+    void read_from_host_init();
     void send_login();
     void send_password();
     void start_timer();
