@@ -507,7 +507,7 @@ void SSHSession::check_end_of_read(uint16_t buffer_point_add) // не логир
             _one_again_taked = false; // это цикличное ожидание, не нужно отправлять нужный энтер
             auto self = shared_from_this();
 
-            _socket.async_wait(asio::ip::tcp::socket::wait_read, [this, self, rc](const asio::error_code &ec)
+            _socket.async_wait(asio::ip::tcp::socket::wait_read, [this, self](const asio::error_code &ec)
                                {
                                    if (!ec)
                                    {
@@ -552,7 +552,6 @@ void SSHSession::read_one_command()
             sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
             shortErrlog("Ошибка во время считывания ответа(ssh) " + std::to_string(rc) + " к хосту ");
         }
-
         else if (_is_end_of_readq) // главное чтобы проверка была до открытия сокета
         {
             _str = "Успешное считывание ответа к хосту ";
@@ -562,7 +561,6 @@ void SSHSession::read_one_command()
         else if (rc == LIBSSH2_ERROR_EAGAIN) // ошибка говорящая что не все байты получены
         {
             auto self = shared_from_this();
-
             _socket.async_wait(asio::ip::tcp::socket::wait_read, [this, self](const asio::error_code &ec)
                                {
                                    if (!ec)

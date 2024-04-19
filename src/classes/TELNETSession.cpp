@@ -79,7 +79,7 @@ void TELNETSession::connect()
                _host.log += ("\n"+_str); 
                 wlog->writeLog(_str+_IPstring);
 start_timer();
-
+read_from_host_init();
             read_from_host(_regex_login,std::bind(&TELNETSession::send_login, this));
 
         }
@@ -108,15 +108,15 @@ void TELNETSession::send_login()
         _timer.cancel();
 
         auto self = shared_from_this();
-        asio::async_write(_socket, asio::buffer(_host.login.name), [this, self](const asio::error_code &error, size_t bytes_transferred)
+        asio::async_write(_socket, asio::buffer(_host.login.name + "\r\n"), [this, self](const asio::error_code &error, size_t bytes_transferred)
                           {
         if (!error) {
 
             start_timer();
-
+read_from_host_init();
             read_from_host(_regex_password,std::bind(&TELNETSession::send_password, this));
 
-
+std::cout << "triger 3\n";
 
         } else {
         _str = "Ошибка при авторизации(логин)(telnet) "+ error.message()+" к хосту ";
@@ -139,13 +139,14 @@ void TELNETSession::send_password()
     try
     {
         _timer.cancel();
-
+        std::cout << "triger 4\n";
         auto self = shared_from_this();
-        asio::async_write(_socket, asio::buffer(_host.login.password), [this, self](const asio::error_code &error, size_t bytes_transferred)
+        asio::async_write(_socket, asio::buffer(_host.login.password + "\r\n"), [this, self](const asio::error_code &error, size_t bytes_transferred)
                           {
         if (!error) {
-
+std::cout << "triger 5\n";
             start_timer();
+            read_from_host_init();
             read_from_host(_regex_end_of_read, std::bind(&TELNETSession::one_iteration, this));
 
         } else {
@@ -195,7 +196,6 @@ void TELNETSession::one_iteration()
         }
         else
         {
-
             // выполняю командe
             _writableCommand = "\n........................................................................................\n\nотправленна команда\t " + _currentDoCommands[_iteration].cmd + " \n\tРезультат:\n";
             _ss << _writableCommand;
@@ -218,13 +218,12 @@ void TELNETSession::exec_com()
     {
 
         auto self = shared_from_this();
-        asio::async_write(_socket, asio::buffer(_currentDoCommands[_iteration].cmd), [this, self](const asio::error_code &error, size_t bytes_transferred)
+        asio::async_write(_socket, asio::buffer((_currentDoCommands[_iteration].cmd + "\r\n")), [this, self](const asio::error_code &error, size_t bytes_transferred)
                           {
         if (!error) {
 
-start_timer();
-
-
+            start_timer();
+            read_from_host_init(_currentDoCommands[_iteration].send_to_step.c_str());
             read_from_host(_regex_end_of_read, std::bind(&TELNETSession::end_of_com, this));
 
 
@@ -302,31 +301,147 @@ void TELNETSession::end_of_com()
     }
 }
 
+void TELNETSession::check_end_of_read(const std::regex &regex) // не логирую
+{
+    try
+    {                                                                                  // обработчик проверки получения всех отправленных данных
+        if (std::regex_search(_last_read_one_it_inside_for_send_to_step.str(), regex)) // условие выхода - совпадение с regex конца чтения
+        {
+            _is_end_of_readq = true;
+            return;
+        }
+
+        bool temp_for_no_duplicate = std::regex_search(_last_read_one_it_inside_for_send_to_step.str(), _moreRegex);
+
+        if (!(temp_for_no_duplicate || _is_this_moreq))
+        // если это сейчас мор, или уже было мор то выполняется функция, а не выход для дальнейшего чтения
+        {
+            return;
+        }
+        // else contunue
+
+        if (temp_for_no_duplicate)
+        {
+            _last_read << _last_read_one_it_inside_for_send_to_step.str(); // чтобы обрабатывать новые данные а не дублировать старые
+            _last_read_one_it_inside_for_send_to_step.str("");
+            // условие выхода всё тоже...
+            asio::write(_socket, asio::buffer(send_to_step));
+            // каждое новое обнаружение more означает что предыдущие данные прочитаны до конца
+        }
+        _is_this_moreq = true; // чтобы не выходить если дошёл до сюда
+
+        // в ssh там логика такая что одинаково читает что из чтения вызова что из проверки,
+        //  а тут я не придумал как так же сделать, и чтобы избежать дублирования (это вызов асинхронной функции внутри которой вызывается другая асинхронная функция)
+        //  дк вот я решил оставить синхронную реализацию
+        //  опасный момент какой-то
+        //  было бы круто остановить выполнение программы пока не выполнится вычисление в check_end_of_read, но кажется это усложнит логику сильно,
+        //  прийдётся использовать фьючеры как то (а я их не изучал ещё как и корутины) и для каждого отдельного вызова check_end_of_read ждать...
+        //  а так - я внутрь вхожу только в том случае если !(std::regex_search(_last_read_one_it_inside_for_send_to_step.str(), _moreRegex)
+        //  то есть просто чтение выполняется как обычная функция, а не как асинхронная (которую всё равно синхронной сделал но в ssh асинхронная)
+        //
+        asio::read(_socket, _read_buffer, asio::transfer_at_least(1), asio_error);
+    }
+    catch (const std::exception &e)
+    {
+        std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на check(telnet)" + _host.log;
+        std::cerr << str << std::endl;
+        plog->writeLog(str);
+    }
+
+    // разделяю области работы
+
+    if (!asio_error)
+    {
+        try
+        {
+            std::istream is(&_read_buffer);
+            while (std::getline(is, line))
+            {
+                _last_read_one_it_inside_for_send_to_step << line + "\n"; // сохраняем строку в stringstream для дальнейшей обработки
+            }
+            check_end_of_read(regex);
+        }
+        catch (const std::exception &e)
+        {
+            std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на check(telnet)" + _host.log;
+            std::cerr << str << std::endl;
+            plog->writeLog(str);
+        }
+    }
+    else
+    {
+        _str = "Ошибка во время считывания чего-то, что не заканчивается на _end_of_read(telnet) " + asio_error.message() + " аутпут(" + _ss.str() + _last_read.str() + _last_read_one_it_inside_for_send_to_step.str() + ") ";
+        _host.log += ("\n" + _str);
+        plog->writeLog("Ошибка во время считывания чего-то, что не заканчивается на ожидаемое значение _end_of_read(telnet) " + asio_error.message() + " к хосту " + _IPstring);
+        sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+        shortErrlog("Ошибка во время считывания чего-то, что не заканчивается на ожидаемое значение _end_of_read(telnet) " + asio_error.message() + " к хосту ");
+        throw std::runtime_error("ошибка из подфункции чтения, запись отработала нормально");
+    }
+}
+
 // вот эту хню нужно с двух сторон обкладывать таймером
 void TELNETSession::read_from_host(const std::regex &regex, std::function<void()> next_callback)
 {
     try
     {
-
         auto self = shared_from_this();
-        asio::async_read_until(_socket, _read_buffer, '\n', [this, self, &regex, next_callback](const asio::error_code &error, size_t bytes_transferred)
-                               {
+        asio::async_read(_socket, _read_buffer, asio::transfer_at_least(1), [this, self, &regex, next_callback](const asio::error_code &error, size_t bytes_transferred)
+                         {
             if (!error)
             {
                 std::istream is(&_read_buffer);
-                std::getline(is, line);
-                _last_read << line; // сохраняем строку в stringstream для дальнейшей обработки
+                while (std::getline(is, line)) {
+                _last_read_one_it_inside_for_send_to_step << line + "\n"; // сохраняем строку в stringstream для дальнейшей обработки
+                        }
 
-                if (std::regex_search(line, regex))
-                {
-                    // Если найдено совпадение с регуляркой, вызываем обратный вызов
+
+                        if(std::regex_search(line, _control_1)){
+
+        asio::async_write(_socket, asio::buffer(std::string("\xff\xfb\x01\xff\xfc\x1f\xff\xfe\x05\xff\xfc\x21")), [this, self, &regex, next_callback](const asio::error_code &error, size_t bytes_transferred)
+                          {
+                            if (!error) {
+                                    read_from_host(regex, next_callback);
+
+                            } else {
+                                _str = "Ошибка при чтении - последовательность вариант 1 (telnet) "+ error.message()+" к хосту ";
+                                    _host.log += ("\n"+_str); 
+                                    plog->writeLog(_str + _IPstring);
+                                    sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+                                    shortErrlog(_str);
+                            } }); 
+                            return;
+                        }
+
+          if(std::regex_search(line, _control_2)){
+
+        asio::async_write(_socket, asio::buffer(std::string("\xff\xfc\x18\xff\xfc\x20\xff\xfc\x23\xff\xfc\x27")), [this, self, &regex, next_callback](const asio::error_code &error, size_t bytes_transferred)
+                          {
+                            if (!error) {
+                                    read_from_host(regex, next_callback);
+
+                            } else {
+                                _str = "Ошибка при чтении - последовательность вариант 2 (telnet) "+ error.message()+" к хосту ";
+                                    _host.log += ("\n"+_str); 
+                                    plog->writeLog(_str + _IPstring);
+                                    sqlite->write_one_hostCommit(TableNameForProgErrorHosts, _host);
+                                    shortErrlog(_str);
+                            } }); 
+                            return;
+                        }
+
+
+                check_end_of_read(regex); // в телнет это синхронная операция, здесь поток остановится
+                if (_is_end_of_readq){
                     next_callback();
+                    _last_read << _last_read_one_it_inside_for_send_to_step.str();
+                    _last_read_one_it_inside_for_send_to_step.str("");
                 }
                 else
                 {
                     // Продолжаем читать из сокета до тех пор, пока не найдем совпадение
                     read_from_host(regex, next_callback);
                 }
+                			
             }
             else
             {
@@ -339,9 +454,27 @@ void TELNETSession::read_from_host(const std::regex &regex, std::function<void()
     }
     catch (const std::exception &e)
     {
-        std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на read_from_host" + _host.log;
-        std::cerr << str << std::endl;
-        plog->writeLog(str);
+        std::string errorMsg = e.what();
+        if (errorMsg != "ошибка из подфункции чтения, запись отработала нормально")
+        {
+            std::string str = "Сработал глобальный try-catch " + std::string(e.what()) + " к хосту " + _IPstring + " на read_from_host" + _host.log;
+            std::cerr << str << std::endl;
+            plog->writeLog(str);
+        }
+    }
+}
+
+void TELNETSession::read_from_host_init(const char *what_send_to_step = "")
+{
+    _is_end_of_readq = false;
+    _is_this_moreq = false;
+    if (what_send_to_step[0]=='\0')
+    {
+        send_to_step = "\x20\n";
+    }
+    else
+    {
+        send_to_step = what_send_to_step;
     }
 }
 

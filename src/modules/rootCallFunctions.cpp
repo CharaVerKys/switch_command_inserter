@@ -3,10 +3,12 @@
 void areYouAgreeq();
 void commit();
 void emptyOutTables();
+
+template<typename T>
 void rootCommandsCommit(asio::io_context &io_context,
                         std::vector<HOST> &validForCommitHosts,
                         std::vector<std::pair<std::string, std::vector<COMMANDS>>> models_and_commands,
-                        std::vector<std::shared_ptr<SSHSession>> &sessions);
+                        std::vector<std::shared_ptr<T>> &sessions);
 ActiveHOSTS rootDoCommandsScan();
 void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts);
 
@@ -156,6 +158,7 @@ void rootScriptTELNET(int argc, char const *argv[])
     }
 }
 
+
 void rootScan(int argc, char const *argv[])
 {
     // если что от лишник объявленных указателей и переменных размер сильно не увеличется
@@ -188,15 +191,19 @@ void rootScan(int argc, char const *argv[])
         exit(0);
     }
 
-    // вот тут и выше если будем делать телнет нужно добавить логику для телнета
-    // вообще нужно будет если телнет то всё что обращается как ssh просто задублировать для телнета
-    // гланое не забыть сделать методы для телнета на show, после того как продублирую остальное
+
 
     if (sqlite->isTableExist(TableNameForSSH)) // удаляю непосредственно перед использованием
     {
         sqlite->emptyOut(TableNameForSSH);
     }
     sqlite->write_to_database(TableNameForSSH, S_activeHosts.ssh);
+
+    if (sqlite->isTableExist(TableNameForTELNET)) // удаляю непосредственно перед использованием
+        {
+            sqlite->emptyOut(TableNameForTELNET);
+        }
+        sqlite->write_to_database(TableNameForTELNET, S_activeHosts.onlyTelnet);
     std::cout << "\n Полученные хосты записаны. Закончите список логиннов и запустите программу \"swcmdins identify\"\n";
     plog->writeLog("Программа завершила работу");
     exit(0);
@@ -219,8 +226,16 @@ void rootIdentify(int argc, char const *argv[])
 
     plog->writeLog("Запущено с глаголом identify");
     ActiveHOSTS I_activeHosts;
-    I_activeHosts.ssh = sqlite->read_from_database(TableNameForSSH);
-    I_activeHosts.onlyTelnet = sqlite->read_from_database(TableNameForTELNET);
+        if (sqlite->isTableExist(TableNameForSSH))
+    {
+            I_activeHosts.ssh = sqlite->read_from_database(TableNameForSSH);
+
+    }
+        if (sqlite->isTableExist(TableNameForTELNET)) 
+    {
+       I_activeHosts.onlyTelnet = sqlite->read_from_database(TableNameForTELNET);
+    }
+   
     rootDoCommandsIdentify(I_activeHosts);
     plog->writeLog("Программа завершила работу");
     exit(0);
@@ -231,7 +246,7 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
     std::cout << "Запущена идентификация моделей\n";
 
     std::vector<std::shared_ptr<IdentifySSH>> sessions;
-    std::vector<std::shared_ptr<IdentifyTELNET>> sessionsT;
+   std::vector<std::shared_ptr<IdentifyTELNET>> sessionsT;
 
     asio::io_context io_context;
 
@@ -248,8 +263,8 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
 
     for (auto &host : I_activeHosts.onlyTelnet)
     {
-        sessionsT.emplace_back(std::make_shared<IdentifyTELNET>(io_context, host, logins, finding_commands, identifinedHosts.onlyTelnet));
-        sessionsT.back()->connect();
+    sessionsT.emplace_back(std::make_shared<IdentifyTELNET>(io_context, host, logins, finding_commands, identifinedHosts.onlyTelnet));
+    sessionsT.back()->connect();
     } // for each
 
     io_context.run();
@@ -336,11 +351,19 @@ void commit()
 {
     plog->writeLog("Запущен коммит");
     std::vector<std::shared_ptr<SSHSession>> sessions;
-    std::vector<std::shared_ptr<TELNETSession>> sessionsT;
+     std::vector<std::shared_ptr<TELNETSession>> sessionsT;
     asio::io_context io_context;
     ActiveHOSTS activeHOSTS;
+
+ if (sqlite->isTableExist(TableNameForSSH))
+    {
     activeHOSTS.ssh = sqlite->read_from_database(TableNameForSSH);
+    }
+
+     if (sqlite->isTableExist(TableNameForTELNET))
+    {
     activeHOSTS.onlyTelnet = sqlite->read_from_database(TableNameForTELNET);
+    }
 
     uint16_t i = 0;
     if (!activeHOSTS.ssh.empty() && activeHOSTS.ssh[0].model == "script")
@@ -359,14 +382,14 @@ void commit()
     }
 
     SSHSession::filterHosts(activeHOSTS.ssh);
-    TELNETSession::filterHosts(activeHOSTS.onlyTelnet);
+     TELNETSession::filterHosts(activeHOSTS.onlyTelnet);
     wlog->writeLog("\n\n\t\tНачался commit.\n");
     rootCommandsCommit(io_context, activeHOSTS.ssh, configer->getModels_and_commands(), sessions);
-    rootCommandsCommit(io_context, activeHOSTS.onlyTelnet, configer->getModels_and_commands(), sessionsT);
+     rootCommandsCommit(io_context, activeHOSTS.onlyTelnet, configer->getModels_and_commands(), sessionsT);
     emptyOutTables(); // обнуляю таблицы перед записью в них
     io_context.run();
     sessions.clear();
-    sessionsT.clear();
+     sessionsT.clear();
 
 
     std::cout << "\n\n---------------------------------\n\n";
@@ -374,10 +397,10 @@ void commit()
     {
         std::cout << entry.second << std::endl;
     }
-    for (const auto &entry : TELNETSession::shortlog)
-    {
-        std::cout << entry.second << std::endl;
-    }
+		    for (const auto &entry : TELNETSession::shortlog)
+		    {
+		    std::cout << entry.second << std::endl;
+		    }
     plog->writeLog("Записываются результаты в лог");
 
     if (sqlite->isTableExist(TableNameForGoodHosts))

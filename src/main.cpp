@@ -48,6 +48,7 @@ rootIdentify(argc, argv);
                          rootScript(argc, argv);
       	break;            // конец script
 
+
         CASE("scripTELN") : //
                          rootScriptTELNET(argc, argv);
       	break;            // конец scripTELN
