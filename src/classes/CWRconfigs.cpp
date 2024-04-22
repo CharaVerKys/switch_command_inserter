@@ -398,6 +398,7 @@ bool Configer::read_scriptIpList()
             }
         }
     }
+    _scriptIpList.close();
     if (_scriptIpList.is_open())
     {
         std::cerr << "Файл scriptIp.list всё ещё открыт, хотя не должен." << std::endl;

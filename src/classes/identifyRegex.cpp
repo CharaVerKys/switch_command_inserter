@@ -447,6 +447,10 @@ void IdentifySSH::one_iteration_inside()
         {
             // если команд не осталось - нашёл
             _host.model = _finding_commands.at(_cover_iteration).first; // ковер соответственно...
+			_str = "Удачно найдена модель для хоста "+ _IPstring + " ("+ _host.model +")";
+			std::cout << _str << std::endl;
+            wlog->writeLog(_str);
+			_identifined_hosts__vector_of_ref.push_back(_host);
             return;                                                     // логика завершения, по идее должен вызвать деструктор прям ща
         }
         else
@@ -647,11 +651,12 @@ void IdentifySSH::end_one_command()
                 // если не (регулярки совпадают) то перейти к следующему массиву
 
                 _str = "неожиданный output команды " + _finding_commands.at(_cover_iteration).second.at(_command_iteration).cmd;
-                _str += ". Ожидалось: " + _finding_commands.at(_cover_iteration).second.at(_command_iteration).expect + "\n\n А в ответе: " + _part_of_ss.str();
-                _host.log += ("\n" + _str);
+                wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в identify.log");
+				_str += ". Ожидалось: " + _finding_commands.at(_cover_iteration).second.at(_command_iteration).expect + "\n\n А в ответе: " + _part_of_ss.str();
 
                 ++_cover_iteration;
                 one_iteration_cover_vector();
+                return;
             }
         }
 
@@ -664,12 +669,12 @@ void IdentifySSH::end_one_command()
                 // если не (регулярки совпадают) то выкинуть ошибку
 
                 _str = "неожиданный output команды " + _finding_commands.at(_cover_iteration).second.at(_command_iteration).cmd;
-                wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в errHosts.log");
+                wlog->writeLog(_str + " на хосте " + _IPstring + " Подробнее в identify.log");
                 _str += ". Ожидалось не получить: " + _finding_commands.at(_cover_iteration).second.at(_command_iteration).not_expect + "\n\n А в ответе: " + _part_of_ss.str();
-                _host.log += ("\n" + _str);
 
                 ++_cover_iteration;
                 one_iteration_cover_vector();
+                return;
             }
         }
 

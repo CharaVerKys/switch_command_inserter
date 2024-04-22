@@ -4,3 +4,4 @@ libs/rapidjson
 libs/libssh2
 libs/SQliteCpp
 .vscode/
+manualBuild/

@@ -1,4 +1,4 @@
-#include <main.hpp>
+		#include <main.hpp>
 
 
 std::vector<HOST> SNinitHostsVector(SNparsedNetworkHost &IpPool)
@@ -177,7 +177,6 @@ ActiveHOSTS ScanNetwork(std::vector<HOST> &hosts)
     std::cout << activeHosts.ssh.size() << " хостов с открытым SSH(22)" << std::endl;
     std::cout << activeHosts.onlyTelnet.size() << " хостов где открыт только telnet(23) " << std::endl;
     std::cout << "Подробнее смотреть в logs/log#/working.log" << std::endl;
-    std::cout << "Telnet рекомендуется обработать вручную, текущая версия не обрабатывает telnet. Иначе производится неполное изменение настроек сети" << std::endl;
     plog->writeLog("Записан лог найденных хостов");
     return std::move(activeHosts);
 }

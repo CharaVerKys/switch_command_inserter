@@ -255,6 +255,11 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
     
     ActiveHOSTS identifinedHosts; // итоговый набор
 
+	if (sqlite->isTableExist(TableNameForIdentify)) // удаляю непосредственно перед использованием
+    {
+        sqlite->emptyOut(TableNameForIdentify);
+    }
+
 // запускаю сам обработчик
 
     for (auto &host : I_activeHosts.ssh)
@@ -272,7 +277,6 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
     io_context.run();
     sessions.clear(); // отчистка воизбежание ошибок по памяти
     sessionsT.clear(); // не понятно как они возникают, но методом тыка нашёл решение
-
     if (sqlite->isTableExist(TableNameForSSH)) // удаляю непосредственно перед использованием
     {
         sqlite->emptyOut(TableNameForSSH);
@@ -286,7 +290,6 @@ void rootDoCommandsIdentify(ActiveHOSTS &I_activeHosts)
     sqlite->write_to_database(TableNameForTELNET, identifinedHosts.onlyTelnet);
 
     plog->writeLog("Записываются результаты в лог");
-
     if (sqlite->isTableExist(TableNameForIdentify)) 
     {
         idelog->writeLog("Обращаю внимание что лог отдельного хоста может быть довольно большой, рекомендую загрепать файл по ключевому слову keyword для получения краткого списка где удачно а где нет");

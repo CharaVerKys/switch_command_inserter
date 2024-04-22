@@ -36,8 +36,9 @@ void initVars(std::filesystem::path executable_path, const int &argc, char const
     wlog = std::make_unique<Logging>((logs_directory / "working.log").string(), true);
 
     // писать эти логи только если параметр запуска комит
+
     bool isWriteThisLog = false;
-    if (argc >= 2 && (std::string(argv[1]) == "commit" || std::string(argv[1]) == "script") )
+    if (argc >= 2 && (std::string(argv[1]) == "commit" || std::string(argv[1]) == "script" || std::string(argv[1]) == "scripTELN") )
     {
         isWriteThisLog = true;
     }

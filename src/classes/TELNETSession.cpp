@@ -116,8 +116,6 @@ void TELNETSession::send_login()
 read_from_host_init();
             read_from_host(_regex_password,std::bind(&TELNETSession::send_password, this));
 
-std::cout << "triger 3\n";
-
         } else {
         _str = "Ошибка при авторизации(логин)(telnet) "+ error.message()+" к хосту ";
                _host.log += ("\n"+_str); 
@@ -139,12 +137,11 @@ void TELNETSession::send_password()
     try
     {
         _timer.cancel();
-        std::cout << "triger 4\n";
+
         auto self = shared_from_this();
         asio::async_write(_socket, asio::buffer(_host.login.password + "\r\n"), [this, self](const asio::error_code &error, size_t bytes_transferred)
                           {
         if (!error) {
-std::cout << "triger 5\n";
             start_timer();
             read_from_host_init();
             read_from_host(_regex_end_of_read, std::bind(&TELNETSession::one_iteration, this));
@@ -432,9 +429,9 @@ void TELNETSession::read_from_host(const std::regex &regex, std::function<void()
 
                 check_end_of_read(regex); // в телнет это синхронная операция, здесь поток остановится
                 if (_is_end_of_readq){
-                    next_callback();
                     _last_read << _last_read_one_it_inside_for_send_to_step.str();
                     _last_read_one_it_inside_for_send_to_step.str("");
+                    next_callback();
                 }
                 else
                 {
