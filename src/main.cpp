@@ -35,6 +35,9 @@ int main(const int argc, char const *argv[])
                             rootScriptTELNET(argc, argv);
         break; // конец scripTELN
 
+        CASE("--help") :
+        showHelp();
+        break;
     default: // выдать ошибку о несоотвествии глагола
         std::cerr << "Неправильный глагол в качестве аргумента.\n"
                   << "Доступные глаголы: scan, identify, script (scripTELN), commit. Допустимо 'scan identify'" << std::endl;

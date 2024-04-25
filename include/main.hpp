@@ -23,7 +23,7 @@ void rootIdentify(int argc, char const *argv[]);
 void rootCommit(int argc, char const *argv[]);
 void rootScript(int argc, char const *argv[]);
 void rootScriptTELNET(int argc, char const *argv[]);
-
+void showHelp();
 
 // scanNetwork.cpp
 ActiveHOSTS ScanNetwork(std::vector<HOST> &hosts);
