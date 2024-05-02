@@ -407,7 +407,7 @@ void SSHSession::one_iteration()
             }
             else
             {
-                send_to_step = _currentDoCommands[_iteration].send_to_step + "\n";
+                send_to_step = _currentDoCommands[_iteration].send_to_step;
             }
 
             execute_one_command();

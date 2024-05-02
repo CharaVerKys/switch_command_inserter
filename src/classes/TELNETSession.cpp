@@ -479,7 +479,6 @@ void TELNETSession::read_from_host_init(const char *what_send_to_step)
     else
     {
         send_to_step = what_send_to_step;
-        send_to_step += "\n";
     }
 }
 

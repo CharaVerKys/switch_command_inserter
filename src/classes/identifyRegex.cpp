@@ -464,7 +464,7 @@ void IdentifySSH::one_iteration_inside()
             }
             else
             {
-                send_to_step = _finding_commands.at(_cover_iteration).second.at(_command_iteration).send_to_step + "\n";
+                send_to_step = _finding_commands.at(_cover_iteration).second.at(_command_iteration).send_to_step;
             }
 
             // сейчас я во внутреннем цикле
